@@ -194,12 +194,17 @@ def main():
         st = STMTS.get(q["id"])
         if st:
             lines = []
+            if st.get("original"):
+                lines.append(st["original"])
+                lines.append("")
             if st.get("stmt"):  lines.append("【题目】" + st["stmt"])
             if st.get("input"): lines.append("【输入】" + st["input"])
             if st.get("output"):lines.append("【输出】" + st["output"])
             if st.get("notes"): lines.append("【要点】" + st["notes"])
             q["stmt"] = "\n".join(lines)
-            q["stmt_src"] = "整理版（原帖未给完整题面，依据题名与面经片段整理）"
+            q["stmt_src"] = ("题面原文：Hack2Hire · " + (st.get("title_h2h") or "") + "　｜　中文要点为整理版"
+                             if st.get("original") else
+                             "整理版（原帖未给完整题面，依据题名与面经片段整理）")
             n_stmt += 1
         else:
             q["stmt"] = ""
