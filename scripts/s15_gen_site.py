@@ -69,6 +69,11 @@ input[type=search]:focus{border-color:var(--ac)}
 .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
 .dot.coding{background:var(--coding)}.dot.system-design{background:var(--sd)}
 .dot.behavioral{background:var(--bq)}.dot.other{background:var(--other)}
+.dot.ml-coding{background:#f472b6}
+.dot.general-coding{background:var(--coding)}
+.dot.design{background:var(--sd)}
+.dot.hr{background:var(--bq)}
+.tag.ml-coding{background:rgba(244,114,182,.14);color:#f9a8d4;border-color:rgba(244,114,182,.28)}
 .qheat{font-size:11.5px;color:var(--dim2);font-variant-numeric:tabular-nums}
 .chev{color:var(--dim2);font-size:16px;flex:0 0 auto}
 
@@ -241,7 +246,8 @@ const T={
     loadHint:'First run downloads the Python runtime (~10MB)',
     back:'Back to list',mentions:n=>`in ${n} posts`,src:'from post',
     empty:'No matching questions',foot:'Data from public community forum OpenAI interview posts · Python runs locally in your browser',
-    noStmt:'No readable description captured yet',rawPosts:'What posts said'}
+    noStmt:'No readable description captured yet',rawPosts:'What posts said',
+    tracks:{'ml-coding':'ML Coding','general-coding':'General Coding','design':'Design','hr':'HR / Behavioral'}}
 };
 let LANG = localStorage.getItem('lang') || ((navigator.language||'en').toLowerCase().startsWith('zh')?'zh':'en');
 const t=k=>T[LANG][k];
@@ -285,17 +291,19 @@ function renderList(){
   document.getElementById('listEmpty').textContent=t('empty');
   document.getElementById('foot').textContent=t('foot');
 
-  const cats=[['all',t('all')],['coding',t('coding')],['system-design',t('sd')],['behavioral',t('bq')],['other',t('other')]];
+  const TR=t('tracks');
+  const cats=[['all',t('all')],['ml-coding',TR['ml-coding']],['general-coding',TR['general-coding']],
+              ['design',TR['design']],['hr',TR['hr']]];
   document.getElementById('tabs').innerHTML=cats.map(([k,label])=>{
-    const n=k==='all'?QS.length:QS.filter(q=>q.category===k).length;
+    const n=k==='all'?QS.length:QS.filter(q=>q.track===k).length;
     return `<div class="tab ${st.cat===k?'on':''}" data-c="${k}">${label} <span style="opacity:.6">${n}</span></div>`;
   }).join('');
   document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{st.cat=el.dataset.c;renderList();});
 
   let list=QS.filter(q=>{
-    if(st.cat!=='all'&&q.category!==st.cat) return false;
+    if(st.cat!=='all'&&q.track!==st.cat) return false;
     if(st.q){
-      const hay=(q.name+' '+(q.name_en||'')+' '+q.category+' '+(q.roles||[]).join(' ')).toLowerCase();
+      const hay=(q.name+' '+(q.name_en||'')+' '+q.category+' '+q.track+' '+(q.roles||[]).join(' ')).toLowerCase();
       if(!hay.includes(st.q)) return false;
     }
     return true;
@@ -307,7 +315,7 @@ function renderList(){
       <div class="qnum">${q._n}.</div>
       <div class="qname">${esc(qName(q))}</div>
       <div class="qmeta">
-        <span class="dot ${q.category}"></span>
+        <span class="dot ${q.track}"></span>
         <span class="qheat">${q.heat||0}</span>
       </div>
       <div class="chev">›</div>
@@ -319,7 +327,9 @@ function renderList(){
 
 /* ---------------- 详情渲染 ---------------- */
 function detailHTML(q){
-  const tags = `<span class="tag ${q.category}">${catLabel(q.category)}</span>`
+  const TRK={'ml-coding':'ml-coding','general-coding':'coding','design':'system-design','hr':'behavioral'};
+  const tk=TRK[q.track]||'other';
+  const tags = `<span class="tag ${tk}">${(t('tracks')||{})[q.track]||q.category}</span>`
     + (q.heat?`<span class="tag hot">${t('mentions')(q.heat)}</span>`:'')
     + (q.roles||[]).map(r=>`<span class="tag">${(r||'').toUpperCase()}</span>`).join('');
 
