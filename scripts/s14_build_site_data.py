@@ -167,6 +167,9 @@ EXTRA = {
  "ml-coding-numpy": ("ML Coding（numpy / 数值稳定性）", r"numpy|数值稳定|ml\s*coding|colab|scipy", ["mle"], "coding"),
  "refactoring": ("Refactoring 重构", r"refactor|重构", ["swe"], "coding"),
  "reservoir-sampling": ("Reservoir / 采样类", r"reservoir|采样", ["mle"], "coding"),
+ "design-youtube": ("设计 YouTube", r"design\s*youtube|youtube|视频平台", ["swe"], "system-design"),
+ "design-job-scheduler": ("设计任务调度系统", r"design\s*job\s*schedul|调度系统|scheduler", ["swe"], "system-design"),
+ "design-web-crawler": ("设计分布式爬虫", r"web\s*crawler|分布式爬虫|爬虫", ["swe"], "system-design"),
 }
 
 

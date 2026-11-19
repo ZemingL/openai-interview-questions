@@ -1,0 +1,891 @@
+[
+ {
+  "id": "69c9f9a3ff3ebde766ced6b4",
+  "type": "SD",
+  "title": "Design Payment System",
+  "subtitle": null,
+  "contentPreview": "## 1. 💳 What is a payment processor?\n\nA payment processor is a service that sits between merchants (shops, restaurants, retailers) and downstream credit card networks (Visa, Mastercard, American Express). When a customer swipes or taps their card, the payment processor receives the transaction request, forwards it to the appropriate network for authorization, and later settles the actual funds in a nightly batch.\n\n## 2. Requirements\n\nWe are designing the core payment processor that sits between merchants and downstream credit card networks. The hard part is bridging fast, synchronous authorization with slower, deferred settlement without losing track of which charges actually settled.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Are both the real-time hold authorization path and the deferred batch settlement path in scope, or are we designing only one of them?\"\n:::\n:::interviewer[Interviewer]\n\"Both are in scope. Hold authorization is synchronous and merchant-blocking: the merchant needs an approve or deny before the customer leaves the counter. Charge settlement is deferred to a nightly batch run.\"\n:::\n:::takeaway[Takeaway]\nThe system has two distinct modes with different expectations: an immediate merchant-facing authorization path and a deferred settlement path.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"What latency does the merchant expect when a hold request is submitted, and does the system have to wait for the downstream processor's response before returning?\"\n:::\n:::interviewer[Interviewer]\n\"Sub-second p95, and yes, the hold path must be synchronous all the way through to the downstream processor. The merchant needs a definitive approve or deny before the transaction completes at the point of sale.\"\n:::\n:::takeaway[Takeaway]\nThe authorization step is on the critical merchant path, so the design has to treat latency there as a first-class requirement.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If a merchant retries a hold or charge request after a network timeout, does each retry create a new authorization, or must repeated requests resolve safely to the same business effect?\"\n:::\n:::interviewer[Interviewer]\n\"Retries must be safe. A retried hold must not produce two separate holds. A retried charge must not appear in the nightly batch twice.\"\n:::\n:::takeaway[Takeaway]\nRetries are a normal part of payment traffic, so the system needs a reliable way to make repeated requests land on the same business outcome.\n:::\n::::\n\n",
+  "company": {
+   "GOOGLE": {
+    "frequency": 3
+   },
+   "MICROSOFT": {
+    "frequency": 6
+   },
+   "AFFIRM": {
+    "frequency": 8
+   },
+   "YELP": {
+    "frequency": 4
+   },
+   "TIKTOK": {
+    "frequency": 7
+   },
+   "ROBLOX": {
+    "frequency": 10
+   },
+   "CAPITAL_ONE": {
+    "frequency": 4
+   },
+   "OPENAI": {
+    "frequency": 10
+   },
+   "STRIPE": {
+    "frequency": 8
+   },
+   "EXPEDIA": {
+    "frequency": 8
+   },
+   "MAI": {
+    "frequency": 7
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 7,
+  "isLocked": false,
+  "createdDate": "2026-03-30T04:18:43.000Z",
+  "updatedDate": "2026-11-12T00:00:02.955Z",
+  "extra": {
+   "expertReviewerId": "sde_j_li",
+   "expertReviewer": {
+    "id": "sde_j_li",
+    "displayName": "J. Li",
+    "initials": "JL",
+    "title": "Senior Engineer",
+    "affiliation": "AMAZON",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-12T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-03-31T03:36:03.225Z",
+  "slug": null
+ },
+ {
+  "id": "69c9fe5dff3ebde766ced6f4",
+  "type": "SD",
+  "title": "Design Slack-like Chat System",
+  "subtitle": null,
+  "contentPreview": "## 1. 💬 What is Slack?\n\nSlack is a workplace messaging platform that lets users communicate through direct messages and group channels. Users can create channels around topics or teams, share text and media, and receive notifications in real time across multiple devices.\n\n## 2. Requirements\n\nWe are designing the core messaging layer for a Slack-like platform: direct messages between two users and group channels with membership lists that range from a handful of people to tens of thousands. The central tension is that small conversations want eager push delivery for an instant feel, while large channels make per-message push prohibitively expensive and demand a fundamentally different delivery model.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Are we designing only for small conversations like DMs and team channels, or do we also need to handle large announcement-style channels with potentially tens of thousands of members?\"\n:::\n:::interviewer[Interviewer]\n\"Both are in scope. A channel can be a two-person DM or a company-wide announcement channel with up to `100K` members. Delivery behavior can differ by channel size, but both types must be supported.\"\n:::\n:::takeaway[Takeaway]\nThe system cannot use a single delivery model for all channels. Channel membership count becomes a first-class input to the delivery strategy, and the architecture must handle both extremes.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"What is the delivery latency expectation for small conversations versus large channels, and does the product treat them differently?\"\n:::\n:::interviewer[Interviewer]\n\"Yes, the product distinguishes. Small conversations should deliver within `200 ms`. Large channels have a `500 ms` budget. The difference is intentional because larger channels take longer to reach all members.\"\n:::\n:::takeaway[Takeaway]\nThe latency gap between small and large channels is a product requirement, not just an engineering convenience. It justifies using a different delivery path for each channel size rather than one uniform approach.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Should the sender receive a delivery confirmation only after the message is durably stored on the server, or is it acceptable to show a sent indicator right away and persist in the background?\"\n:::\n:::interviewer[Interviewer]\n\"The server must persist the message before returning the send confirmation. Showing a pending indicator on the client before that is fine as a UX touch, but the server must not acknowledge until it has durably saved the message.\"\n:::\n:::takeaway[Takeaway]\nThe write path is synchronous through the persistence layer before any delivery fan-out begins. This rules out fire-and-forget publish-first designs for the send acknowledgment.\n:::\n::::\n\n",
+  "company": {
+   "GOOGLE": {
+    "frequency": 5
+   },
+   "META": {
+    "frequency": 9
+   },
+   "YELP": {
+    "frequency": 5
+   },
+   "TIKTOK": {
+    "frequency": 5
+   },
+   "DATABRICKS": {
+    "frequency": 7
+   },
+   "LINKEDIN": {
+    "frequency": 5
+   },
+   "AIRBNB": {
+    "frequency": 8
+   },
+   "SNAPCHAT": {
+    "frequency": 10
+   },
+   "OPENAI": {
+    "frequency": 9
+   },
+   "ANTHROPIC": {
+    "frequency": 7
+   },
+   "REDDIT": {
+    "frequency": 8
+   },
+   "EBAY": {
+    "frequency": 7
+   },
+   "MAI": {
+    "frequency": 8
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 8,
+  "isLocked": true,
+  "createdDate": "2026-03-30T04:38:53.393Z",
+  "updatedDate": "2026-11-18T00:00:03.036Z",
+  "extra": {
+   "expertReviewerId": "sde_m_wang",
+   "expertReviewer": {
+    "id": "sde_m_wang",
+    "displayName": "M. Wang",
+    "initials": "MW",
+    "title": "Staff Engineer",
+    "affiliation": "COINBASE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-18T00:00:03.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-03-31T03:36:33.774Z",
+  "slug": null
+ },
+ {
+  "id": "69c9ff24ff3ebde766ced6fa",
+  "type": "SD",
+  "title": "Design CICD System",
+  "subtitle": null,
+  "contentPreview": "## 1. What is a multi-tenant CI/CD system?\n\nA multi-tenant CI/CD platform listens to source-control events, decides whether a workflow should run, executes build or test or deploy steps in isolated environments, and shows users a truthful progress page. Unlike a single-team Jenkins box, it has to survive bursty Git pushes, keep tenants isolated, and recover cleanly when runners or browsers disconnect.\n\nA naive design says, \"A Git push arrives, read the YAML, start some containers, and show a spinner.\" The hard part is that the push is untrusted input, the workflow config must be pinned to the pushed commit, the scheduler may release only one step at a time, and the browser still has to tell the truth after reconnect. The goal is one repo-pinned, tenant-safe, strictly ordered workflow timeline that the scheduler and the UI can both trust.\n\n## 2. Requirements\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Should the system support only linear sequential workflows where each step runs after the previous one finishes, or does the scope include parallel stages running at the same time or conditional branching based on a step's outcome?\"\n:::\n:::interviewer[Interviewer]\n\"Linear sequential only. Each workflow is a flat ordered list of steps. No parallel fan-out between steps, no matrix builds, no conditional skip logic. One step finishes, then the next one starts.\"\n:::\n:::takeaway[Takeaway]\nStrictly linear execution reduces the scheduler to a single invariant: at most one step in a run may be dispatched or running at any time. This lets the scheduler advance the run by finding the first non-terminal step rather than evaluating a dependency graph.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Can a single push event trigger multiple parallel workflows with different event triggers and conditions, or is there exactly one scheduled workflow run triggered per code push?\"\n:::\n:::interviewer[Interviewer]\n\"One scheduled workflow run per push. If a push is received, we trigger a single workflow execution. Complex event-based workflow routing or multi-workflow selection are out of scope.\"\n:::\n:::takeaway[Takeaway]\nOne scheduled run per push simplifies our scheduling path, letting us use the repository code push as the definitive, unambiguous trigger for a single workflow run.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Do tenants need fully dedicated execution infrastructure, or is shared compute acceptable as long as each tenant's execution, secrets, logs, and identity stay isolated?\"\n:::\n:::interviewer[Interviewer]\n\"Shared compute is acceptable for most tenants as long as execution, secrets, logs, and identities are strictly isolated per tenant. Dedicated infrastructure could exist later for premium customers, but it is not required in this scope.\"\n:::\n:::takeaway[Takeaway]\nTenant isolation has to be enforced at the execution boundary, not by giving every customer their own infrastructure. The design should preserve strict per-tenant separation for runtime identity, secrets, and logs while still allowing shared capacity underneath.\n:::\n::::\n\n",
+  "company": {
+   "OPENAI": {
+    "frequency": 9
+   },
+   "EBAY": {
+    "frequency": 7
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 6,
+  "isLocked": true,
+  "createdDate": "2026-03-30T04:42:12.906Z",
+  "updatedDate": "2026-11-09T00:00:02.506Z",
+  "extra": {
+   "expertReviewerId": "sde_k_deng",
+   "expertReviewer": {
+    "id": "sde_k_deng",
+    "displayName": "K. Deng",
+    "initials": "KD",
+    "title": "Staff Engineer",
+    "affiliation": "META",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-09T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-03-31T03:36:50.716Z",
+  "slug": null
+ },
+ {
+  "id": "69cb09edff3ebde766cedb20",
+  "type": "SD",
+  "title": "Design Online Chess Game",
+  "subtitle": null,
+  "contentPreview": "## 1. What is a chess.com-style online chess game?\n\nAn online chess platform such as [chess.com](https://www.chess.com/) lets two players get paired quickly, join a shared game room, see the same board in real time, and finish the game under a strict time control. To the user it feels like a lightweight realtime app, but the system still needs three non-negotiable truths: match outcome, legal move order, and clock ownership.\n\n<img src=\"https://assets.hack2hire.com/post/69cb09edff3ebde766cedb20/3d62b6b9-fb45-4e7a-b2dc-c88436661201_20260330.gif\" alt=\"\" height=\"500\" width=\"500\" />\n\n## 2. Requirements\n\nTwo humans want the game to feel like a single shared board, yet only the server can decide who got paired, which move legally happened next, and whose clock actually ran. If those three truths drift, the product stops being chess and becomes two disconnected animations.\n\n> [!NOTE]\n> In the interview, I would pin down the time control early. Increment vs no-increment changes both pool boundaries and how you apply the clock at each committed move.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Are we supporting a single time control, or do we need to handle multiple formats like bullet, blitz, and classical? And does any time control use a per-move increment?\"\n:::\n:::interviewer[Interviewer]\n\"Support multiple formats, at minimum the popular ones like 3+2, 5+0, and 10+0. Yes, increment must be supported.\"\n:::\n:::takeaway[Takeaway]\nMultiple time controls require separate matchmaking queues partitioned by time control label so players only wait against compatible opponents. Increment support means the clock model must apply a configurable bonus to the moving player's remaining time after each committed ply, not just decrement a countdown.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Are we handling both rated and casual games? And are spectators, tournaments, and puzzle modes in scope?\"\n:::\n:::interviewer[Interviewer]\n\"Rated and casual head-to-head matches are in scope. Tournaments, spectators, and puzzle features are out of scope for this design.\"\n:::\n:::takeaway[Takeaway]\nRated games introduce a rating update step that must happen after the game result is durable, but not during the live move path. Rating updates should be decoupled from move acknowledgement to avoid adding latency to the player-facing game loop.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If a player's move request is retried due to a dropped connection, can the server end up committing the same ply twice, or does the protocol guarantee at-most-one commit per ply?\"\n:::\n:::interviewer[Interviewer]\n\"At most one commit per ply, always. A duplicate or stale move submission must be detected and rejected, not applied again.\"\n:::\n:::takeaway[Takeaway]\nMove submissions must carry a ply number or version identifier so the server can reject any request that does not match the expected next ply. This single check is the invariant that prevents two different committed states from existing for the same position in a live game.\n:::\n::::\n\n",
+  "company": {
+   "MICROSOFT": {
+    "frequency": 5
+   },
+   "AIRBNB": {
+    "frequency": 6
+   },
+   "OPENAI": {
+    "frequency": 10
+   },
+   "MAI": {
+    "frequency": 7
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "SCREENING",
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 8,
+  "isLocked": true,
+  "createdDate": "2026-03-30T23:40:29.375Z",
+  "updatedDate": "2026-11-19T08:00:02.980Z",
+  "extra": {
+   "expertReviewerId": "sde_k_deng",
+   "expertReviewer": {
+    "id": "sde_k_deng",
+    "displayName": "K. Deng",
+    "initials": "KD",
+    "title": "Staff Engineer",
+    "affiliation": "META",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-19T08:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-03-31T03:38:52.365Z",
+  "slug": null
+ },
+ {
+  "id": "69cb3259ff3ebde766cedc1f",
+  "type": "SD",
+  "title": "Design AI Chatbot App",
+  "subtitle": null,
+  "contentPreview": "## 1. 🤖 What is an AI Chatbot App?\n\nAn AI chatbot app is a web application that lets users have real-time conversations with a large language model (LLM). The user types a message, the system sends it to an AI model, and the response streams back token-by-token so the user sees the answer being \"typed out\" progressively. Products like ChatGPT, Claude, and Gemini are well-known examples of this pattern.\n\n## 2. Requirements\n\nWe are designing the backend and streaming infrastructure for an ephemeral AI chatbot application. A user logs in, sends a text prompt, and receives the AI model's response streamed token-by-token via Server-Sent Events (SSE). There is no backend message persistence: the conversation lives entirely in the browser, and a page refresh resets everything. The core design tension is delivering a fast, progressive token stream through a stateless proxy while handling streaming failures, upstream model unpredictability, and auth-guarded long-running connections.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Should conversations be persisted server-side so users can resume a session later, or is the conversation history owned entirely by the client?\"\n:::\n:::interviewer[Interviewer]\n\"Entirely client-owned. No server-side message storage. A page refresh resets everything. That is acceptable for this product.\"\n:::\n:::takeaway[Takeaway]\nThis removes server-side chat history from scope. The backend only needs durable state for identity and usage, not for conversation storage or replay.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"What is the acceptable latency from prompt submission to the first streamed token appearing in the UI?\"\n:::\n:::interviewer[Interviewer]\n\"Under 500 milliseconds at p95. Once the stream starts, token delivery should feel continuous, with no perceptible gaps between tokens.\"\n:::\n:::takeaway[Takeaway]\nThe synchronous work before the first token has to stay very small. Anything heavy or optional cannot sit on the critical path ahead of stream start.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Does the client send the full conversation history with each new prompt, or does the backend maintain session state and assemble the context itself?\"\n:::\n:::interviewer[Interviewer]\n\"The client sends it all. The backend is stateless and does not track session context between requests.\"\n:::\n:::takeaway[Takeaway]\nClient-owned context means request size grows with conversation length. Token-budget enforcement and truncation start as a client-side product concern rather than a backend persistence problem.\n:::\n::::\n\n",
+  "company": {
+   "MICROSOFT": {
+    "frequency": 4
+   },
+   "UBER": {
+    "frequency": 8
+   },
+   "OPENAI": {
+    "frequency": 7
+   },
+   "MAI": {
+    "frequency": 8
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 5,
+  "isLocked": false,
+  "createdDate": "2026-03-31T02:32:57.041Z",
+  "updatedDate": "2026-11-09T00:00:02.613Z",
+  "extra": {
+   "expertReviewerId": "sde_y_chen",
+   "expertReviewer": {
+    "id": "sde_y_chen",
+    "displayName": "Y. Chen",
+    "initials": "YC",
+    "title": "Engineering Manager",
+    "affiliation": "STRIPE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-09T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-03-31T03:39:06.200Z",
+  "slug": null
+ },
+ {
+  "id": "69cb3b1aff3ebde766cedc63",
+  "type": "SD",
+  "title": "Design Webhook Delivery System",
+  "subtitle": null,
+  "contentPreview": "## 1. What is a webhook delivery system?\n\nA webhook delivery system lets one product notify another product by making an outbound HTTP callback when a business event happens. On the surface this looks like a simple `POST` to a stored URL. The real design problem is that the callback target lives on the public internet, can be slow or malicious, and should never block the product that generated the event.\n\n## 2. Requirements\n\nTriggering a webhook should feel like a small durable write to the product that owns the event. The hard part is everything that happens after that write.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"When a tenant registers a webhook for a specific event type, can they point multiple callback URLs at the same event type, or is it always one URL per event type per tenant?\"\n:::\n:::interviewer[Interviewer]\n\"One active callback URL per event type per tenant. Fanout to multiple URLs for the same event is out of scope.\"\n:::\n:::takeaway[Takeaway]\nOne-to-one routing means the trigger path resolves a single registration row per trigger and produces one delivery record, keeping the routing and delivery state machine straightforward without a fan-out join on the hot trigger path.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If a tenant updates their callback URL while a delivery is already being retried, should that retry go to the new URL or the URL that was registered when the trigger was originally accepted?\"\n:::\n:::interviewer[Interviewer]\n\"Use the URL that was active when the trigger was originally accepted. An in-flight delivery should not be rerouted to a new URL registered after acceptance.\"\n:::\n:::takeaway[Takeaway]\nEach delivery record must store a snapshot of the destination at accept time rather than a live reference to the registration row, making retry behavior deterministic and preventing a URL change from silently redirecting deliveries already mid-lifecycle.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Is the system expected to guarantee that each triggered event is delivered to the callback endpoint exactly once, even across retries and worker crashes?\"\n:::\n:::interviewer[Interviewer]\n\"Exactly-once delivery to arbitrary external HTTP endpoints is not achievable. The system guarantees at-least-once delivery. Receivers must tolerate duplicate deliveries using the stable delivery identifier included in every outbound request.\"\n:::\n:::takeaway[Takeaway]\nThe delivery contract is at-least-once. The system provides a stable delivery ID in every outbound request so idempotent receivers can deduplicate. The tutorial must not claim exactly-once delivery in requirements or design.\n:::\n::::\n\n",
+  "company": {
+   "OPENAI": {
+    "frequency": 7
+   },
+   "STRIPE": {
+    "frequency": 5
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 6,
+  "isLocked": true,
+  "createdDate": "2026-03-31T03:10:18.642Z",
+  "updatedDate": "2026-11-15T08:00:02.968Z",
+  "extra": {
+   "expertReviewerId": "sde_m_wang",
+   "expertReviewer": {
+    "id": "sde_m_wang",
+    "displayName": "M. Wang",
+    "initials": "MW",
+    "title": "Staff Engineer",
+    "affiliation": "COINBASE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-15T08:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-03-31T03:40:00.654Z",
+  "slug": null
+ },
+ {
+  "id": "69cc73c2ff3ebde766cee30b",
+  "type": "SD",
+  "title": "Design TinyURL",
+  "subtitle": null,
+  "contentPreview": "## 1. 🔗 What is a URL shortener?\n\nA URL shortening service takes long URLs and returns compact aliases (short codes) that redirect browsers and API clients to the original destination. For example, a long URL like `https://www.example.com/products/spring-sale?utm_source=newsletter&utm_campaign=april_launch` might become `https://s.example.com/aZ9k2Qx`. It is read-heavy: the dominant workload is issuing HTTP redirects for lookups by short code, while new mappings are created far less often.\n\n## 2. Requirements\n\nA URL shortener sounds like a single table and a redirect, but its read and write paths have different challenges. Redirects require a small key lookup at very high read QPS and low tail latency. Meanwhile, every new short code must be globally unique and durably stored.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"If a user submits the exact same long URL twice, should we always return the exact same short code? And are custom aliases in scope?\"\n:::\n:::interviewer[Interviewer]\n\"For this system, yes. We want duplicate submissions of the same long URL to come back with the same short code. Custom aliases are in scope too, and if someone asks for one that is already taken, we should return a conflict error instead of overwriting it.\"\n:::\n:::takeaway[Takeaway]\nStable deduplication requires a way to map long URLs to existing short codes before creating new ones. Custom aliases require an atomic check against the namespace on creation.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If a user deletes or updates a link, does that change need to take effect globally in real time, or can the redirection path tolerate some delay?\"\n:::\n:::interviewer[Interviewer]\n\"We can tolerate eventual consistency. Redirection speed is critical, so we do not mind if there is a short delay for deletion or update updates to propagate globally.\"\n:::\n:::takeaway[Takeaway]\nEventual consistency allows us to serve redirects entirely from cache, decoupling read latency and query load from our authoritative storage database.\n:::\n::::\n\n",
+  "company": {
+   "GOOGLE": {
+    "frequency": 7
+   },
+   "AMAZON": {
+    "frequency": 5
+   },
+   "MICROSOFT": {
+    "frequency": 6
+   },
+   "CONFLUENT": {
+    "frequency": 10
+   },
+   "YELP": {
+    "frequency": 5
+   },
+   "SNAPCHAT": {
+    "frequency": 5
+   },
+   "OPENAI": {
+    "frequency": 4
+   },
+   "EBAY": {
+    "frequency": 5
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 1,
+  "frequency": 10,
+  "isLocked": false,
+  "createdDate": "2026-04-01T01:24:18.018Z",
+  "updatedDate": "2026-11-18T16:00:02.905Z",
+  "extra": {
+   "expertReviewerId": "sde_s_zhang",
+   "expertReviewer": {
+    "id": "sde_s_zhang",
+    "displayName": "S. Zhang",
+    "initials": "SZ",
+    "title": "Staff Engineer",
+    "affiliation": "GOOGLE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-18T16:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-01T01:30:03.632Z",
+  "slug": null
+ },
+ {
+  "id": "69cd3e3cff3ebde766cee66e",
+  "type": "SD",
+  "title": "Design Youtube",
+  "subtitle": null,
+  "contentPreview": "## 1. 🎬 What is YouTube?\n\nYouTube is a video-sharing platform where creators upload recorded videos and viewers watch them on demand across many devices and network conditions. From a system-design angle, it combines two very different problems: ingesting very large user uploads reliably, then serving the same content back as low-latency segmented streams at extreme read skew.\n\n## 2. Requirements\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Are we building for prerecorded uploads and on-demand playback only, or is live streaming also in scope? And should we include content discovery, search, or recommendations, or are we focused just on the upload and playback flows?\"\n:::\n:::interviewer[Interviewer]\n\"Just prerecorded uploads and on-demand playback. Live streaming is out of scope. Discovery, search, and recommendations are also out of scope for this interview.\"\n:::\n:::takeaway[Takeaway]\nScoping to prerecorded content means the design covers two distinct engineering flows: resumable ingest to object storage and async packaging into an adaptive bitrate manifest-plus-segment format. Live streaming would require a fundamentally different real-time ingest pipeline that the prerecorded design cannot be adapted to cover.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"How long after a completed upload is it acceptable for the video to be unavailable while processing finishes? Is a few minutes okay, or does it need to be watchable within seconds?\"\n:::\n:::interviewer[Interviewer]\n\"A processing delay before the video becomes watchable is fine. The uploader should be able to see that the video is still being processed during that time.\"\n:::\n:::takeaway[Takeaway]\nAn acceptable processing window of minutes allows a fully asynchronous background pipeline. The pipeline must be idempotent on retry, and the ready-state transition must be atomic so the video only becomes watchable once all required packaged outputs exist.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Can individual videos suddenly go viral and receive a massive spike in traffic within minutes of being published? Does the system need to absorb that kind of per-video burst without affecting the rest of the service?\"\n:::\n:::interviewer[Interviewer]\n\"Yes, viral spikes on individual videos are real and expected. A single video going viral must not bring down the rest of the service.\"\n:::\n:::takeaway[Takeaway]\nSegments and manifests must be served through CDN with long cache TTLs and origin shielding so the origin is never directly exposed to viral fan-out. New-video publish events create a thundering herd on first CDN fill, which requires coalesced fill requests rather than one origin fetch per viewer.\n:::\n::::\n\n",
+  "company": {
+   "GOOGLE": {
+    "frequency": 8
+   },
+   "AMAZON": {
+    "frequency": 8
+   },
+   "NETFLIX": {
+    "frequency": 7
+   },
+   "SNAPCHAT": {
+    "frequency": 8
+   },
+   "OPENAI": {
+    "frequency": 3
+   },
+   "DATADOG": {
+    "frequency": 7
+   },
+   "HUBSPOT": {
+    "frequency": 8
+   },
+   "VERKADA": {
+    "frequency": 7
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 9,
+  "isLocked": false,
+  "createdDate": "2026-04-01T15:48:12.300Z",
+  "updatedDate": "2026-11-18T00:00:02.973Z",
+  "extra": {
+   "expertReviewerId": "sde_s_zhang",
+   "expertReviewer": {
+    "id": "sde_s_zhang",
+    "displayName": "S. Zhang",
+    "initials": "SZ",
+    "title": "Staff Engineer",
+    "affiliation": "GOOGLE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-18T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-01T16:33:52.295Z",
+  "slug": null
+ },
+ {
+  "id": "69ce7e9a4f38b199f9e49099",
+  "type": "SD",
+  "title": "Design Job Scheduler",
+  "subtitle": null,
+  "contentPreview": "## 1. ⏰ What is a distributed job scheduler?\n\nA distributed job scheduler accepts instructions such as `\"run this task every day at 02:00 UTC\"` and makes sure the task runs at the right time. Doing that on one machine is straightforward. The interesting part begins when many schedulers and workers share the job: the system must recover from failures without losing a scheduled run or recording the same run twice.\n\n## 2. Requirements\n\nWe will design a scheduler for immediate, one-time, and recurring jobs. As we work through it, keep one question in mind: when several machines notice that the same job is due, how do we create one durable record for that scheduled run and recover it safely after a failure?\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Are we designing for recurring cron-style jobs only, or does the scheduler also need to handle one-shot jobs scheduled for a specific future time and jobs that should run immediately on demand?\"\n:::\n:::interviewer[Interviewer]\n\"All three. Most jobs use recurring cadences, but engineers also need to schedule one-off maintenance tasks for a specific time and trigger immediate runs through an API. All three types need the same reliability guarantees.\"\n:::\n:::takeaway[Takeaway]\nAll three kinds of schedule should create the same kind of durable run record. Later, we will call that record an execution slot. Using one model gives immediate, one-time, and recurring jobs the same retry and recovery behavior.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"When the same scheduled occurrence could be dispatched twice after a crash, does the platform guarantee at most one committed success for that occurrence, or is deduplication left entirely to the job handler?\"\n:::\n:::interviewer[Interviewer]\n\"The platform must prevent two workers from both reporting committed success for the same fire time. What the job does externally, like sending an email or calling a payment API, is the handler's problem. We are not in a position to guarantee idempotency for arbitrary external calls.\"\n:::\n:::takeaway[Takeaway]\nThe scheduler can guarantee one committed result for each run record, but it cannot control side effects in another system. We will use a generation number to reject results from an old worker, while handlers use their own idempotency keys for external calls.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If the scheduler has been down for several hours, should every missed occurrence fire when it comes back, or is there an age limit after which we discard missed occurrences?\"\n:::\n:::interviewer[Interviewer]\n\"All missed occurrences must be backfilled from durable state once the control plane recovers. No occurrences are to be skipped, dropped, or ignored regardless of how long the outage lasted.\"\n:::\n:::takeaway[Takeaway]\nThe system needs a durable checkpoint from which it can recreate every missed run after recovery. An in-memory timer or queue alone cannot meet this requirement.\n:::\n::::\n\n",
+  "company": {
+   "GOOGLE": {
+    "frequency": 9
+   },
+   "MICROSOFT": {
+    "frequency": 8
+   },
+   "DOORDASH": {
+    "frequency": 8
+   },
+   "LYFT": {
+    "frequency": 9
+   },
+   "ROBINHOOD": {
+    "frequency": 10
+   },
+   "YELP": {
+    "frequency": 4
+   },
+   "PINTEREST": {
+    "frequency": 7
+   },
+   "TIKTOK": {
+    "frequency": 8
+   },
+   "DATABRICKS": {
+    "frequency": 7
+   },
+   "LINKEDIN": {
+    "frequency": 8
+   },
+   "AIRBNB": {
+    "frequency": 8
+   },
+   "ATLASSIAN": {
+    "frequency": 7
+   },
+   "SNAPCHAT": {
+    "frequency": 6
+   },
+   "OPENAI": {
+    "frequency": 3
+   },
+   "REDDIT": {
+    "frequency": 7
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 10,
+  "isLocked": true,
+  "createdDate": "2026-04-02T14:35:06.623Z",
+  "updatedDate": "2026-11-06T00:00:02.866Z",
+  "extra": {
+   "expertReviewerId": "sde_s_zhang",
+   "expertReviewer": {
+    "id": "sde_s_zhang",
+    "displayName": "S. Zhang",
+    "initials": "SZ",
+    "title": "Staff Engineer",
+    "affiliation": "GOOGLE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-06T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-02T15:59:22.732Z",
+  "slug": null
+ },
+ {
+  "id": "69d0903c17b72775cc49bcf0",
+  "type": "SD",
+  "title": "Design Google Calendar",
+  "subtitle": null,
+  "contentPreview": "## 1. 📅 What is Google Calendar?\n\nGoogle Calendar is a shared calendaring product where people manage multiple calendars, create recurring events, invite attendees, and keep their schedule consistent across phones, web clients, and email-driven reminders. Although the interface resembles familiar CRUD, the design must keep one authoritative event record while recurrence, attendee state, permissions, reminders, and device sync all derive different views from it.\n\n## 2. Requirements\n\nGoogle Calendar is a shared scheduling product where correctness is critical: a duplicate reminder, a lost RSVP, or a stale device view breaks user trust. The design must keep event identity, recurrence, attendee state, and sync recovery coherent under a bounded resource footprint.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Are AI scheduling, conference room booking, and CalDAV federation in scope, or are we focusing on core shared calendaring: recurring events, attendee RSVPs, and cross-device sync?\"\n:::\n:::interviewer[Interviewer]\n\"Core shared calendaring is in scope, including recurring events with exception handling and attendee RSVP. AI scheduling, resource calendars, and CalDAV federation are out.\"\n:::\n:::takeaway[Takeaway]\nFocusing on core scheduling keeps the design centered on event truth and attendee consistency rather than complex recommendation logic or cross-protocol federation.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"For recurring events, should I think of the series as one recurring event with occasional exceptions, or do we expect every future occurrence to behave like its own independent event? And is pre-expanding the whole future acceptable?\"\n:::\n:::interviewer[Interviewer]\n\"Infinite future expansion is not acceptable. We must support editing one occurrence without affecting the rest of the series.\"\n:::\n:::takeaway[Takeaway]\nWe must avoid materializing an infinite future of events. Instead, the design should compute occurrences dynamically from a set of rules and bounded exception overrides.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"What is the write acknowledgement latency target for event mutations, and does cross-device freshness need to be synchronous or is eventual consistency acceptable?\"\n:::\n:::interviewer[Interviewer]\n\"Target `p95 < 200 ms` for event writes. Cross-device freshness within a few seconds is fine; it does not need to be synchronous.\"\n:::\n:::takeaway[Takeaway]\nA sub-200 ms write SLA implies we must acknowledge updates as soon as the core event is saved, moving reminder evaluations and fan-out notifications to background tasks.\n:::\n::::\n\n",
+  "company": {
+   "LINKEDIN": {
+    "frequency": 6
+   },
+   "AIRBNB": {
+    "frequency": 6
+   },
+   "OPENAI": {
+    "frequency": 4
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 6,
+  "isLocked": true,
+  "createdDate": "2026-04-04T04:14:52.280Z",
+  "updatedDate": "2026-11-18T08:00:03.163Z",
+  "extra": {
+   "expertReviewerId": "sde_m_wang",
+   "expertReviewer": {
+    "id": "sde_m_wang",
+    "displayName": "M. Wang",
+    "initials": "MW",
+    "title": "Staff Engineer",
+    "affiliation": "COINBASE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-18T08:00:03.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-04T05:17:16.422Z",
+  "slug": null
+ },
+ {
+  "id": "69d6f527c4c1bc791ee229e3",
+  "type": "SD",
+  "title": "Design ChatGPT",
+  "subtitle": null,
+  "contentPreview": "## 1. 🤖 What is ChatGPT?\n\nChatGPT is an AI-powered conversational assistant where users type text prompts and receive AI-generated responses in real time. The system maintains multi-turn conversations, streaming each response token by token so the user sees output appearing progressively rather than waiting for a complete answer.\n\n## 2. Requirements\n\nWe are designing the backend for a ChatGPT-like conversational AI service. Users send text prompts within multi-turn conversations. The system assembles the conversation context, dispatches inference to a GPU cluster, and streams generated tokens back in real time via *Server-Sent Events (SSE)*. Users expect sub-second responsiveness, but GPU inference takes seconds and is expensive. The architecture bridges that gap with streaming delivery, intelligent scheduling, and a lean pre-inference pipeline.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Should the system persist conversation history durably, so users can resume a conversation across sessions?\"\n:::\n:::interviewer[Interviewer]\n\"Yes, conversations must be durable. Users expect to return to a thread days later and continue from where they left off.\"\n:::\n:::takeaway[Takeaway]\nDurable conversation history is part of the core product contract, not an optional extra. The design therefore needs a clear boundary between persisted conversation state and the live streaming path.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"What latency targets apply to the streaming response? Specifically the time before the first token appears and the token delivery rate once the stream is running?\"\n:::\n:::interviewer[Interviewer]\n\"Time-to-first-token at or below 500 milliseconds at p50 and 2 seconds at p95. Once streaming begins, the delivery rate should be 30 to 60 tokens per second per stream.\"\n:::\n:::takeaway[Takeaway]\nThe synchronous path before the first token has a tight latency budget. Context loading, safety checks, and scheduling overhead all have to fit within that budget instead of growing unchecked.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"When a conversation grows longer than the model's token limit, what should the system do with the excess history?\"\n:::\n:::interviewer[Interviewer]\n\"Truncate the oldest turns. Users understand that very long conversations lose early context. We do not need to summarize. Just drop from the beginning.\"\n:::\n:::takeaway[Takeaway]\nThis makes truncation the required behavior when history exceeds the model limit. The system needs a predictable way to assemble recent context without pretending the full conversation always fits.\n:::\n::::\n\n",
+  "company": {
+   "AMAZON": {
+    "frequency": 4
+   },
+   "OPENAI": {
+    "frequency": 9
+   },
+   "ANTHROPIC": {
+    "frequency": 6
+   },
+   "XAI": {
+    "frequency": 4
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 7,
+  "isLocked": false,
+  "createdDate": "2026-04-09T00:39:03.942Z",
+  "updatedDate": "2026-11-17T08:00:02.785Z",
+  "extra": {
+   "expertReviewerId": "sde_m_wang",
+   "expertReviewer": {
+    "id": "sde_m_wang",
+    "displayName": "M. Wang",
+    "initials": "MW",
+    "title": "Staff Engineer",
+    "affiliation": "COINBASE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-17T08:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-09T00:42:26.789Z",
+  "slug": null
+ },
+ {
+  "id": "69d71cbfc4c1bc791ee22b22",
+  "type": "SD",
+  "title": "Design GPU Scheduling Platform",
+  "subtitle": null,
+  "contentPreview": "## 1. 🖥️ What is a GPU Scheduling Platform?\n\nA GPU scheduling platform manages a shared pool of GPU nodes and allows multiple users or teams to submit compute jobs, typically ML training runs, fine-tuning tasks, or batch inference, that require GPU resources. The platform queues jobs by priority, assigns them to nodes with available capacity, runs them inside containers, and handles failures automatically. It provides the shared scheduling and execution layer used by an ML platform team.\n\n## 2. Requirements\n\nWe are designing the scheduling and execution layer for a shared GPU cluster. Users submit containerized batch jobs with resource requirements and priority levels. The platform queues, schedules, runs, and monitors those jobs across a pool of GPU nodes. The scheduler must make fast priority-driven placement decisions while keeping the scheduler, database, and remote node agent consistent, even when one of them fails mid-assignment.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Before I design the scheduler, I want to understand the placement model. Do any jobs require GPUs across multiple nodes simultaneously, meaning all nodes must start at once and failing to acquire one means releasing all the others?\"\n:::\n:::interviewer[Interviewer]\n\"No, assume each job fits on a single node. Gang scheduling for distributed training is a follow-up. The core tutorial covers single-job, single-node placement.\"\n:::\n:::takeaway[Takeaway]\nThis keeps the core placement problem to one job on one node. Distributed multi-node coordination is out of scope for the main design.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If the platform decides a job should run on a specific node but that node becomes unreachable before the job actually starts, should those GPU resources be released automatically after a short time?\"\n:::\n:::interviewer[Interviewer]\n\"Release it automatically after a short timeout. GPU slots must never stay locked by a ghost claim. We cannot hold a GPU slot hostage to an unresponsive node.\"\n:::\n:::takeaway[Takeaway]\nReservation state cannot be allowed to stick forever after a partial failure. The design needs an automatic expiry or recovery mechanism for in-flight placements.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"When a high-priority job arrives and all GPUs are occupied, should the scheduler preempt any running job with lower priority, or only jobs that are at least one full priority band lower than the arriving job?\"\n:::\n:::interviewer[Interviewer]\n\"Only preempt jobs that are of strictly lower priority than the incoming one. Never preempt a job of equal priority, as that would create endless evictions.\"\n:::\n:::takeaway[Takeaway]\nPreemption is allowed, but only across distinct priority boundaries. Jobs of equal priority should not displace each other.\n:::\n::::\n\n",
+  "company": {
+   "DATABRICKS": {
+    "frequency": 6
+   },
+   "OPENAI": {
+    "frequency": 10
+   },
+   "ANTHROPIC": {
+    "frequency": 3
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 5,
+  "isLocked": true,
+  "createdDate": "2026-04-09T03:27:59.598Z",
+  "updatedDate": "2026-11-15T16:00:02.642Z",
+  "extra": {
+   "expertReviewerId": "sde_j_li",
+   "expertReviewer": {
+    "id": "sde_j_li",
+    "displayName": "J. Li",
+    "initials": "JL",
+    "title": "Senior Engineer",
+    "affiliation": "AMAZON",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-15T16:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-09T04:53:50.715Z",
+  "slug": null
+ },
+ {
+  "id": "69dc41c3e4441834b3f736bb",
+  "type": "SD",
+  "title": "Design Distributed Web Crawler",
+  "subtitle": null,
+  "contentPreview": "## 1. 🕸️ What is a Web Crawler?\n\nA *web crawler (or spider)* is a program that systematically traverses the web by downloading pages and following hyperlinks from one page to the next. Web crawlers power search engine indexing, dataset collection for *Large Language Model (LLM)* training, content monitoring, and archival projects. The core challenge is doing this at internet scale, across billions of pages, while being polite to site operators and resilient to the messy, failure-prone nature of the open web.\n\n## 2. Requirements\n\nWe are designing a distributed web crawler that starts from a set of seed URLs, fetches web pages, extracts text content and outbound links, deduplicates work, and stores the extracted text for downstream use such as LLM training. The core challenge is crawling billions of pages within a bounded time window while being polite to site operators and avoiding redundant work.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Should the crawler follow links freely to any new domain it discovers on the public internet, or should it stay within a predefined set of domains from the seed list?\"\n:::\n:::interviewer[Interviewer]\n\"Follow outbound links freely across the public internet, starting from a seed set but expanding to any new domains discovered, subject to robots.txt rules and per-domain politeness limits.\"\n:::\n:::takeaway[Takeaway]\nUnbounded domain traversal means the URL frontier must scale to billions of unique URLs, making URL-level deduplication before enqueuing a correctness requirement rather than an optimization. Domain-level rate limiting must also coordinate across the entire fleet rather than being enforced locally per worker.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Should the crawler also preserve the raw HTML of each fetched page in case downstream consumers need it, or should it only store the extracted text content?\"\n:::\n:::interviewer[Interviewer]\n\"Only store the extracted text content. Downstream consumers do not need the raw HTML, and storing raw HTML at our scale would create unnecessary storage overhead. Storing or serving raw HTML is out of scope.\"\n:::\n:::takeaway[Takeaway]\nStoring only the extracted text simplifies our storage footprint and means the content-level deduplication index operates on the extracted text body rather than the raw HTML markup.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If two different URLs return identical HTML content, should the system store that content twice or detect the duplicate and skip the second storage?\"\n:::\n:::interviewer[Interviewer]\n\"Duplicate content should be detected and storage should be skipped after the first occurrence. Two URLs pointing to identical content produce one stored object, not two.\"\n:::\n:::takeaway[Takeaway]\nTwo distinct deduplication layers are needed: URL-hash deduplication before enqueuing to filter redundant fetches, and content-hash deduplication after fetching to filter redundant storage. The content-hash index must handle concurrent writes from a distributed fleet without creating duplicate storage windows.\n:::\n::::\n\n",
+  "company": {
+   "META": {
+    "frequency": 6
+   },
+   "MICROSOFT": {
+    "frequency": 3
+   },
+   "LYFT": {
+    "frequency": 7
+   },
+   "PINTEREST": {
+    "frequency": 5
+   },
+   "DATABRICKS": {
+    "frequency": 4
+   },
+   "ATLASSIAN": {
+    "frequency": 10
+   },
+   "OPENAI": {
+    "frequency": 3
+   },
+   "MAI": {
+    "frequency": 6
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 9,
+  "isLocked": false,
+  "createdDate": "2026-04-13T01:07:15.066Z",
+  "updatedDate": "2026-11-02T00:00:02.716Z",
+  "extra": {
+   "expertReviewerId": "sde_j_li",
+   "expertReviewer": {
+    "id": "sde_j_li",
+    "displayName": "J. Li",
+    "initials": "JL",
+    "title": "Senior Engineer",
+    "affiliation": "AMAZON",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-02T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-04-13T01:36:33.454Z",
+  "slug": null
+ },
+ {
+  "id": "69f9729772a3d3fe39f8d21b",
+  "type": "SD",
+  "title": "Design A Nearby POI Service",
+  "subtitle": null,
+  "contentPreview": "## 1. 📍 What is a Nearby POI Service?\n\nA nearby *POI (Point of Interest)* service lets users search for restaurants, gas stations, parks, hospitals, and other places near a given location. Products like Yelp, Foursquare, Google Maps, and Uber's place-picker all rely on a POI backend that indexes millions of places and answers \"what is near me?\" queries in milliseconds. Behind the simple search box is a geospatial indexing problem: the service must narrow a huge global dataset to a small set of nearby candidates without scanning every record.\n\n## 2. Requirements\n\nServing nearby queries over 200 million Point of Interest (POI) records requires balancing massive read volumes with consistent, durable updates. The core product tension is returning highly accurate, sorted location results to users in under 200 milliseconds, even under concentrated peak traffic in major metropolitan centers.\n\n### Clarifying Questions\n::::qa-item\n:::you[You]\n\"Who writes POI data here? Is it mostly business owners and admins, or do we also need to handle crowd-sourced edits from end users at large scale?\"\n:::\n:::interviewer[Interviewer]\n\"Business owners and platform admins only, at a few hundred writes per second at peak. No crowd-sourced real-time contribution flow.\"\n:::\n:::takeaway[Takeaway]\nA low peak write volume allows us to focus our database design on optimizing heavy read and search propagation latency, rather than raw ingest throughput.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"For nearby search, do we return everything within a radius, the nearest k results, or do we need both?\"\n:::\n:::interviewer[Interviewer]\n\"The client can specify either: a radius for proximity filtering, or a k count for nearest-k results. Both modes need to work.\"\n:::\n:::takeaway[Takeaway]\nSupporting both radius cutoffs and nearest-K searches forces us to design a search-traversal logic that can stop expanding once target counts or distance limits are met.\n:::\n::::\n\n",
+  "company": {
+   "OPENAI": {
+    "frequency": 10
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 5,
+  "isLocked": true,
+  "createdDate": "2026-05-05T04:31:19.958Z",
+  "updatedDate": "2026-11-09T08:00:02.751Z",
+  "extra": {
+   "expertReviewerId": "sde_m_wang",
+   "expertReviewer": {
+    "id": "sde_m_wang",
+    "displayName": "M. Wang",
+    "initials": "MW",
+    "title": "Staff Engineer",
+    "affiliation": "COINBASE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-09T08:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-05-05T05:11:37.096Z",
+  "slug": null
+ },
+ {
+  "id": "6ab2ff05e74ebb7457a3ef14",
+  "type": "SD",
+  "title": "Design a Distributed Power Grid Control System",
+  "subtitle": null,
+  "contentPreview": "## 1. ⚡ What is a distributed power grid control system?\n\nWhen demand on the grid spikes, utilities can either fire up expensive peaker plants or ask flexible loads to use less. A demand-response control system is the second option: a dispatch center sends control commands to millions of smart devices (*air conditioners (ACs)*, water heaters, *electric vehicle (EV)* chargers, thermostats) asking them to shed load for a window of time. The devices live in homes and buildings on ordinary consumer internet, and their owners always keep the final say.\n\n## 2. Requirements\n\nA demand-response event starts with a number the grid operator already chose, such as \"cut 20% for 60 minutes,\" and ends with a number someone will be paid on. In between, `5M` owner-controlled devices on flaky home networks may never hear the command, refuse it, or quietly undo it, so the system has to act on a fast estimate during the event and still defend its final answer weeks later.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Where does the 20% target come from? Are we expected to watch grid load and decide when to curtail, or does someone hand us the target?\"\n:::\n:::interviewer[Interviewer]\n\"The grid operator gives you the target, the cohort, the start time, and the duration. Forecasting and the decision to curtail are not yours.\"\n:::\n:::takeaway[Takeaway]\nThis rules out the monitoring-pipeline framing. The core of the design is a control loop that turns a given target into per-device commands, then verifies and corrects, with telemetry serving only as feedback.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Is the final reduction number just for the operator's dashboard, or does it feed settlement, where program participants or the utility get paid on it?\"\n:::\n:::interviewer[Interviewer]\n\"It feeds settlement. Participants and regulators can dispute it, and you need to be able to show how you got it.\"\n:::\n:::takeaway[Takeaway]\nThe final number must be reproducible from raw evidence and versioned. That forces an append-only telemetry lake and a restatement policy, separate from the fast live estimate.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Do we need to hit the target accurately per device, or is the cohort total what matters?\"\n:::\n:::interviewer[Interviewer]\n\"The cohort total. Per-device records only matter as evidence when someone audits the result.\"\n:::\n:::takeaway[Takeaway]\nMeasurement can be statistical at cohort level, which makes a counterfactual baseline and a holdout group workable. Per-device state is kept for audit and correction targeting, not for per-device accuracy.\n:::\n::::\n\n",
+  "company": {
+   "OPENAI": {
+    "frequency": 10
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 3,
+  "frequency": 10,
+  "isLocked": false,
+  "createdDate": "2026-09-22T22:19:49.023Z",
+  "updatedDate": "2026-11-07T16:00:02.904Z",
+  "extra": {
+   "expertReviewerId": "sde_m_wang",
+   "expertReviewer": {
+    "id": "sde_m_wang",
+    "displayName": "M. Wang",
+    "initials": "MW",
+    "title": "Staff Engineer",
+    "affiliation": "COINBASE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-07T16:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-09-22T23:35:22.953Z",
+  "slug": null
+ },
+ {
+  "id": "6acc71782e3a0349b3a8cbe2",
+  "type": "SD",
+  "title": "Design a Sandboxed Cloud IDE",
+  "subtitle": null,
+  "contentPreview": "## 1. 💻 What is a Sandboxed Cloud IDE?\n\nA cloud *IDE (Integrated Development Environment)* such as Replit, GitHub Codespaces, Google Colab, or an internal \"devbox\" lets a user write code, manage files, and run commands entirely from the browser. The code does not run on the user's laptop. It runs on the provider's machines inside a sandbox, which means the provider is executing untrusted programs from thousands of strangers on shared hardware. The product feels like a personal laptop that is always on. The backend is a fleet of short-lived, isolated machines that exist only while someone is working.\n\nWe will design the core loop: a user opens a workspace, the platform finds or starts a sandbox for it, the user edits files and types into a terminal, clicks Run and watches logs stream back live, then walks away while the platform suspends the sandbox and keeps the files.\n\n## 2. Requirements\n\nUsers expect a laptop that is always on and instant, but the provider can only afford to run their untrusted code on isolated machines that exist while someone is actually typing. Every requirement below pulls on one of three tensions: start latency vs. idle cost, live streaming vs. durable replay, and isolation vs. density.\n\n### Clarifying Questions\n\n::::qa-item\n:::you[You]\n\"Is this closer to Colab, where people mostly run things, or Codespaces, where a workspace is a long-lived devbox they come back to every day?\"\n:::\n:::interviewer[Interviewer]\n\"Treat it as a devbox. People come back to the same project, but the thing I care about most is what happens when they click Run or Build.\"\n:::\n:::takeaway[Takeaway]\nThe workspace must outlive any machine, and run/build becomes a tracked job with its own state and log, not just bytes in a terminal.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"Whose code is running in there? Only employees, or anyone who signs up?\"\n:::\n:::interviewer[Interviewer]\n\"Anyone. Assume some users are actively hostile.\"\n:::\n:::takeaway[Takeaway]\nA plain container sharing the host kernel is not a strong enough boundary. We need *VM (virtual machine)*-grade isolation, which pushes us toward microVMs and egress control.\n:::\n::::\n\n::::qa-item\n:::you[You]\n\"If a host dies, how much of a user's work can we lose? Zero, or the last minute or so?\"\n:::\n:::interviewer[Interviewer]\n\"Losing about a minute is acceptable. Losing the project is not.\"\n:::\n:::takeaway[Takeaway]\nFiles can live on fast local disk as long as we snapshot them to object storage periodically. We do not need a write-through network filesystem.\n:::\n::::\n\n",
+  "company": {
+   "OPENAI": {
+    "frequency": 8
+   }
+  },
+  "algorithmTags": [],
+  "stages": [
+   "ONSITE"
+  ],
+  "difficulty": 2,
+  "frequency": 8,
+  "isLocked": true,
+  "createdDate": "2026-10-12T05:34:48.761Z",
+  "updatedDate": "2026-11-04T00:00:02.833Z",
+  "extra": {
+   "expertReviewerId": "sde_s_zhang",
+   "expertReviewer": {
+    "id": "sde_s_zhang",
+    "displayName": "S. Zhang",
+    "initials": "SZ",
+    "title": "Staff Engineer",
+    "affiliation": "GOOGLE",
+    "specialty": "SD"
+   }
+  },
+  "lastReportSeenData": {
+   "lastReportSeenDate": "2026-11-04T00:00:02.000Z"
+  },
+  "cover": null,
+  "topic": null,
+  "estimatedReadingTimeInMinutes": null,
+  "chapterType": null,
+  "codingQuestions": [],
+  "firstPublishedDate": "2026-10-12T05:50:59.547Z",
+  "slug": null
+ }
+]
