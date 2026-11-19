@@ -101,6 +101,33 @@ input[type=search]:focus{border-color:var(--ac)}
 textarea.code{width:100%;min-height:230px;background:var(--code);color:#cdd9e5;border:0;
   padding:14px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;
   line-height:1.65;resize:vertical;outline:none;tab-size:4}
+/* CodeMirror 适配 */
+.CodeMirror{height:auto!important;min-height:230px;background:var(--code)!important;
+  color:#cdd9e5!important;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace!important;
+  font-size:13.5px!important;line-height:1.65!important;padding:6px 0}
+.CodeMirror-gutters{background:var(--code)!important;border-right:1px solid var(--line)!important}
+.CodeMirror-linenumber{color:#3e4859!important;font-size:12px!important}
+.CodeMirror-cursor{border-left:2px solid var(--ac2)!important}
+.CodeMirror-selected{background:rgba(16,163,127,.18)!important}
+.CodeMirror-activeline-background{background:rgba(255,255,255,.025)!important}
+.CodeMirror-matchingbracket{color:var(--ac2)!important;border-bottom:1px solid var(--ac2)}
+.cm-s-material-darker .cm-keyword{color:#c792ea!important}
+.cm-s-material-darker .cm-def{color:#82aaff!important}
+.cm-s-material-darker .cm-string{color:#c3e88d!important}
+.cm-s-material-darker .cm-number{color:#f78c6c!important}
+.cm-s-material-darker .cm-comment{color:#546e7a!important;font-style:italic}
+.cm-s-material-darker .cm-builtin{color:#ffcb6b!important}
+.cm-s-material-darker .cm-variable{color:#cdd9e5!important}
+.cm-s-material-darker .cm-operator{color:#89ddff!important}
+.ed.fs{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+  width:100vw!important;height:100dvh!important;max-width:none!important;margin:0!important;
+  z-index:200;border-radius:0;display:flex;flex-direction:column;background:var(--bg);padding:0}
+.ed.fs .edbar,.ed.fs .edact{flex:0 0 auto}
+.ed.fs textarea.code{flex:1;min-height:0;resize:none;font-size:15px}
+.ed.fs .out{max-height:38vh;flex:0 0 auto}
+.ed.fs .CodeMirror{flex:1 1 auto;height:auto!important;min-height:0;max-height:none}
+.ed.fs .CodeMirror-scroll{max-height:none;min-height:100%}
+.ed.fs .CodeMirror-sizer{min-height:100%!important}
 .edact{display:flex;gap:8px;padding:9px 13px;background:var(--card2);border-top:1px solid var(--line);flex-wrap:wrap}
 button{font-family:inherit;font-size:13.5px;border-radius:8px;border:1px solid var(--line);
   background:var(--card);color:var(--txt);padding:7px 16px;cursor:pointer;transition:.14s}
@@ -149,10 +176,7 @@ footer{text-align:center;padding:34px 16px;color:var(--dim2);font-size:12px;line
   .ansbody .piece{font-size:13.5px;max-height:340px}
   details.ans summary{padding:12px 13px;font-size:14px}
   .ansbody{padding:0 13px 14px}
-  /* 全屏编辑 */
-  .ed.fs{position:fixed;inset:0;z-index:200;border-radius:0;display:flex;flex-direction:column;background:var(--bg)}
-  .ed.fs textarea.code{flex:1;min-height:0;resize:none;font-size:15px}
-  .ed.fs .out{max-height:38vh}
+
 }
 </style>
 </head>
@@ -183,6 +207,13 @@ footer{text-align:center;padding:34px 16px;color:var(--dim2);font-size:12px;line
 <footer id="foot"></footer>
 
 <script id="DATA" type="application/json">__DATA__</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/selection/active-line.min.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>
 const D = JSON.parse(document.getElementById('DATA').textContent);
@@ -339,16 +370,33 @@ function attachDetail(q){
   const ed=document.getElementById('ed-'+q.id);
   const ta=document.getElementById('code-'+q.id);
   const out=document.getElementById('out-'+q.id);
+
+  // ---- CodeMirror 初始化（CDN 失败则退回原生 textarea）----
+  let cm=null;
+  if(window.CodeMirror){
+    cm=CodeMirror.fromTextArea(ta,{
+      mode:{name:'python',version:3,singleLineStringErrors:false},
+      theme:'material-darker',lineNumbers:true,lineWrapping:true,
+      matchBrackets:true,autoCloseBrackets:true,indentUnit:4,tabSize:4,
+      styleActiveLine:true,viewportMargin:Infinity
+    });
+    setTimeout(()=>{ try{cm.refresh();}catch(e){} },60);
+  }
+  const getCode=()=>cm?cm.getValue():ta.value;
+  const setCode=v=>{ if(cm) cm.setValue(v); else ta.value=v; };
+
   ed.querySelectorAll('[data-act]').forEach(b=>{
     b.onclick=()=>{
       const a=b.dataset.act;
-      if(a==='run') runPy(q,ta,out,b);
-      else if(a==='reset'){ ta.value=tpl(q); }
-      else if(a==='copy'){ navigator.clipboard.writeText(ta.value).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,1100);}); }
+      if(a==='run') runPy(q,getCode(),out,b);
+      else if(a==='reset'){ setCode(tpl(q)); }
+      else if(a==='copy'){ navigator.clipboard.writeText(getCode()).then(()=>{const o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,1100);}); }
       else if(a==='fs'){
         ed.classList.toggle('fs');
         b.textContent = ed.classList.contains('fs')?t('exit'):t('full');
         document.body.style.overflow = ed.classList.contains('fs')?'hidden':'';
+        setTimeout(()=>{ if(cm) cm.refresh(); },80);
+        if(ed.classList.contains('fs') && ed.scrollIntoView) ed.scrollIntoView({block:'start'});
       }
     };
   });
@@ -376,7 +424,7 @@ if __name__ == "__main__":
     # assert solve(...) == ...
 `;
 }
-async function runPy(q,ta,out,btn){
+async function runPy(q,code,out,btn){
   out.className='out show';
   out.innerHTML=`<span class="lbl">${t('running')}</span>${t('loadHint')}`;
   btn.disabled=true; const old=btn.textContent; btn.textContent=t('running')+'…';
@@ -386,7 +434,7 @@ async function runPy(q,ta,out,btn){
     py.setStdout({batched:s=>buf.push(s)});
     py.setStderr({batched:s=>buf.push(s)});
     let err=null;
-    try{ await py.runPythonAsync(ta.value); }catch(e){ err=e.message||String(e); }
+    try{ await py.runPythonAsync(code); }catch(e){ err=e.message||String(e); }
     const txt=buf.join('');
     out.innerHTML = (txt?`<span class="lbl">${t('output')}</span>${esc(txt)}`:'')
       + (err?`<span class="lbl">${t('err')}</span><span class="err">${esc(err)}</span>`
