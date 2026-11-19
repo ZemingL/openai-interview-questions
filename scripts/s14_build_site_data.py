@@ -190,7 +190,7 @@ NOISE = re.compile(
     r"&#x?[0-9A-Fa-f]+;|setAttribute|innerHTML|\.innerHTML|sbtn\.|document\.|"
     r"function\s*\(|window\.|^\s*var\s+\w+\s*=|onclick|javascript:|"
     r"本帖隐藏|积分高于|您当前积分|使用VIP即刻解锁|解锁阅读权限|"
-    r"回复发表中|回复\s*$|收藏\s*\d|^\s*\d+\s*$|^x$|^\s*[+\-]?\d+\s*$")
+    r"回复发表中|回复\s*$|收藏\s*\d|欢迎体验一亩三分地|职业规划.*面试辅导|量身定制|^\s*\d+\s*$|^x$|^\s*[+\-]?\d+\s*$")
 # 评论性开头
 COMMENT = re.compile(r"^(恭喜|lz\b|楼主|感谢|谢谢|patpat|mark|蹲|同问|请问下|求问|好奇|"
                      r"太可惜|牛逼|厉害|收藏了|赞一个|顶|沙发|同加面|我也是|我是懒羊羊)")
@@ -332,7 +332,7 @@ def main():
 
     out = {
         "meta": {
-            "source": "一亩三分地 /bbs/ 论坛 openai 面经帖 + /interview/ 题库",
+            "source": "public community forum OpenAI interview posts",
             "generated": __import__("time").strftime("%Y-%m-%d %H:%M"),
             "posts": len(posts),
             "questions": len(questions),

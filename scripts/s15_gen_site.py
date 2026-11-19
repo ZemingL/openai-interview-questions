@@ -16,7 +16,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>OpenAI 面试题库 · 一亩三分地面经</title>
+<title>OpenAI Interview Questions</title>
 <style>
 :root{
   --bg:#0b0e14; --bg2:#11151f; --card:#161b26; --card2:#1c2230;
@@ -46,9 +46,9 @@ h1 .g{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-bac
   border-radius:7px;user-select:none;transition:.15s;line-height:1.3}
 .lang span.on{background:var(--accent);color:#04120e;font-weight:600}
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--dim)}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--dim);display:flex;align-items:baseline;gap:4px}
 .stat b{color:var(--txt);font-size:15px;font-variant-numeric:tabular-nums;margin-right:4px}
-.stat span{color:var(--dim)}
+.stat span{color:var(--dim);margin-left:3px}
 
 /* ---------- filters ---------- */
 .filters{position:sticky;top:0;z-index:30;background:rgba(11,14,20,.94);
@@ -316,7 +316,7 @@ document.querySelectorAll('#lang span').forEach(el=>{
 });
 /* ========================================= */
 
-const state = {cat:new Set(), role:new Set(), stage:new Set(), q:'', sort:'heat'};
+const state = {cat:new Set(), role:new Set(), stage:new Set(), q:'', sort:'heat', open:new Set()};
 
 /* ---------- chips ---------- */
 function buildChips(el, items, key){
@@ -404,7 +404,7 @@ function render(){
         <div class="hint">${t('loadHint')}</div>
       </div>` : '';
 
-    return `<div class="card" id="card-${q.id}">
+    return `<div class="card${state.open.has(q.id)?' open':''}" id="card-${q.id}">
       <div class="head" onclick="toggle('${q.id}',event)">
         <div class="rank ${hot}">${i+1}</div>
         <div class="body">
@@ -433,7 +433,9 @@ function render(){
 
 function toggle(id,e){
   if(e && e.target.tagName==='A') return;
-  document.getElementById('card-'+id).classList.toggle('open');
+  const el=document.getElementById('card-'+id);
+  el.classList.toggle('open');
+  if(el.classList.contains('open')) state.open.add(id); else state.open.delete(id);
 }
 
 /* ---------- python ---------- */
