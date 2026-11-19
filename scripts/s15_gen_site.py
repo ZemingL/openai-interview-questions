@@ -151,6 +151,8 @@ details.ans summary::-webkit-details-marker{display:none}
 details.ans summary::before{content:"▸";color:var(--ac);transition:.2s;display:inline-block}
 details.ans[open] summary::before{transform:rotate(90deg)}
 details.ans summary .cnt{font-size:12px;color:var(--dim2);font-weight:400;margin-left:auto}
+details.raw summary::before{content:"▸";color:var(--dim2)}
+.stmt .from{opacity:.75}
 .ansbody{padding:0 16px 16px;border-top:1px solid var(--line)}
 .ansbody .piece{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--ac);
   border-radius:9px;padding:13px;margin-top:13px;font-size:14px;line-height:1.8;
@@ -239,7 +241,7 @@ const T={
     loadHint:'First run downloads the Python runtime (~10MB)',
     back:'Back to list',mentions:n=>`in ${n} posts`,src:'from post',
     empty:'No matching questions',foot:'Data from public community forum OpenAI interview posts · Python runs locally in your browser',
-    noStmt:'No description captured from the original posts'}
+    noStmt:'No readable description captured yet',rawPosts:'What posts said'}
 };
 let LANG = localStorage.getItem('lang') || ((navigator.language||'en').toLowerCase().startsWith('zh')?'zh':'en');
 const t=k=>T[LANG][k];
@@ -321,11 +323,25 @@ function detailHTML(q){
     + (q.heat?`<span class="tag hot">${t('mentions')(q.heat)}</span>`:'')
     + (q.roles||[]).map(r=>`<span class="tag">${(r||'').toUpperCase()}</span>`).join('');
 
-  const stmt = (q.snippets&&q.snippets.length)
-    ? q.snippets.slice(0,3).map(s=>
-        `<div class="stmt">${esc(s.text)}<span class="from">${t('src')} #${s.tid}</span></div>`
-      ).join('<div style="height:10px"></div>')
-    : `<div class="stmt" style="color:var(--dim2)">${t('noStmt')}</div>`;
+  // 主描述：结构化题面（整理版）优先，其次原帖碎片
+  let stmt = '';
+  if (q.stmt) {
+    stmt = `<div class="stmt">${esc(q.stmt)}<span class="from">${q.stmt_src||''}</span></div>`;
+  } else if (q.desc) {
+    stmt = `<div class="stmt">${esc(q.desc)}</div>`;
+  } else if (q.snippets && q.snippets.length) {
+    stmt = q.snippets.slice(0,2).map(x=>
+      `<div class="stmt">${esc(x.text)}<span class="from">${t('src')} #${x.tid}</span></div>`
+    ).join('<div style="height:10px"></div>');
+  } else {
+    stmt = `<div class="stmt" style="color:var(--dim2)">${t('noStmt')}</div>`;
+  }
+
+  // 原帖怎么说（折叠，次要信息）
+  const raw = (q.desc && q.stmt)
+    ? `<div class="block"><details class="ans raw"><summary>${t('rawPosts')}<span class="cnt">${q.desc_src?q.desc_src.length:0}</span></summary>
+        <div class="ansbody"><div class="piece" style="border-left-color:var(--dim2)">${esc(q.desc)}</div></div></details></div>`
+    : '';
 
   const editor = q.runnable ? `
     <div class="block">
@@ -360,6 +376,7 @@ function detailHTML(q){
     <h1 class="dtitle">${q._n}. ${esc(qName(q))}</h1>
     <div class="tags">${tags}</div>
     <div class="block"><h2>${t('stmt')}</h2>${stmt}</div>
+    ${raw}
     ${editor}
     ${ans}`;
 }

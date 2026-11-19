@@ -1,0 +1,158 @@
+{
+ "infection-spread-cellular-automata": {
+  "stmt": "给定一个 M×N 的网格，每格是一种状态：健康(.)、感染(I)、免疫(R)。每天所有格子同时演化：感染格会把它上下左右相邻的健康格变成感染；感染格在第 K 天后转为免疫；免疫格不再被感染。",
+  "input": "grid: list[list[str]]，天数上限 max_days",
+  "output": "全部稳定所需天数；若永不稳定返回 -1",
+  "notes": "共 5 问递进：①求稳定天数 ②加免疫细胞 ③免疫期倒计时 ④可任选一行/一列在某天开始燃烧 ⑤在 ④ 基础上求最优策略。注意 Q3/Q4 与社区流传的 Hack2Hire 版本已有改动，直接用旧做法会挂 test case。"
+ },
+ "gpu-credits": {
+  "stmt": "设计一个 GPU 额度(credit)管理系统，支持额度的发放与消耗，并处理过期逻辑。",
+  "input": "create_grant(id, amount, expire_time) / subtract(user, amount) / get_balance(user)",
+  "output": "subtract 返回实际扣减的额度；余额不足时的行为需明确定义",
+  "notes": "多问递进：①基础 grant/subtract/balance ②加过期优先级（先扣最早过期的）③乱序到达的操作怎么处理 ④follow-up：生产级优化，避免每次从 T0 重算。"
+ },
+ "kv-store-time-based": {
+  "stmt": "实现一个带时间戳版本的内存 KV Store，用于分布式训练任务保存 checkpoint 元数据。",
+  "input": "set(key, value, timestamp) / get(key, timestamp)",
+  "output": "get 返回「时间戳 ≤ 给定时间戳」的最近一次写入的值",
+  "notes": "时间戳单调递增，可以用数组 + 二分。追问版本数上限、线程安全、冷热数据分层。"
+ },
+ "durable-kv-store-serialization": {
+  "stmt": "在 KV Store 之上加持久化：把内存状态序列化到磁盘，进程重启后能恢复到一致状态。",
+  "input": "snapshot() / restore(path)",
+  "output": "恢复后的 key-value 与快照时刻完全一致",
+  "notes": "要点是增量快照 vs 全量快照、写时复制、以及恢复过程中崩溃的一致性保证（WAL 思路）。"
+ },
+ "numpy-1nn-wx-b": {
+  "stmt": "用纯 NumPy 实现 1-NN（最近邻）分类器，以及线性层 y = Wx + b 的前向计算，不允许写 Python 循环。",
+  "input": "X_train: (N,D) ndarray, y_train: (N,), X_test: (M,D)",
+  "output": "预测标签 (M,)；1-NN 用 L2 或曼哈顿距离",
+  "notes": "考察向量化：用广播算距离矩阵 (M,N)，再 argmin。follow-up 会问曼哈顿距离版本、内存优化（分批算距离）、以及数值稳定性。"
+ },
+ "autograd-hillis-steele-scan": {
+  "stmt": "实现自动微分：给定一个前向计算图，写出反向传播。附加题用 Hillis-Steele 并行扫描算法实现前缀和。",
+  "input": "前向函数 + 输入张量；scan 的输入是一维数组",
+  "output": "各节点梯度；scan 输出前缀和数组",
+  "notes": "核心是链式法则的向量化实现和 log(n) 深度的并行扫描。"
+ },
+ "transformer-bug-hunt": {
+  "stmt": "给一段有 4 处 bug 的 Transformer 实现，找出并修复。",
+  "input": "完整的 attention + KV cache 代码",
+  "output": "能跑通正确输出的修复版本",
+  "notes": "4 个经典 bug：①attention 输出写成了 v（KV cache 的 v）②attention mask 没加 -inf ③位置编码或维度顺序错 ④KV cache 更新时机错。"
+ },
+ "masked-cross-entropy-loss": {
+  "stmt": "实现带 mask 的交叉熵损失，忽略 padding 位置的 loss。",
+  "input": "logits: (B,T,V)，targets: (B,T)，mask: (B,T)",
+  "output": "标量 loss（只对 mask=1 的位置求平均）",
+  "notes": "要点：log-sum-exp 数值稳定、mask 后求均值要除以有效 token 数而不是 B*T。"
+ },
+ "sharded-matmul-backprop-debugging": {
+  "stmt": "多卡分片的矩阵乘法及其反向传播，找出实现里的 bug。",
+  "input": "A: (M,K)，B: (K,N)，按行/列切分到多卡",
+  "output": "分布式前向 + 反向的正确实现，以及显存/通信量分析",
+  "notes": "考察对 GEMM 分块、all-reduce / all-gather 的理解，以及反向传播在两个操作数上的梯度对称性。"
+ },
+ "classifier-noisy-annotators": {
+  "stmt": "训练数据由多个标注者打标，不同标注者可靠性不同（有的噪声很大）。要训一个分类器并对测试集预测。",
+  "input": "每个样本有多个标注标签，部分样本只有一个人标",
+  "output": "分类器 + 每个标注者的可靠性估计",
+  "notes": "思路：EM 估计标注者混淆矩阵（Dawid-Skene 模型），或者用 weighted loss。follow-up 问标注者数量极少时怎么办。"
+ },
+ "monster-battle-system": {
+  "stmt": "实现一个回合制怪兽对战系统。",
+  "input": "两队怪兽，每只有 type、攻击力、生命值",
+  "output": "战斗过程事件序列 + 最终胜者",
+  "notes": "多问递进：①基础攻击/扣血 ②怪兽有属性，相克伤害翻倍、被克减半 ③不同属性攻击要按顺序结算 ④每回合优先攻击能造成最大伤害的目标。research 岗高频。"
+ },
+ "poker-simulation": {
+  "stmt": "模拟扑克牌局的发牌与比牌。",
+  "input": "牌堆、玩家手牌",
+  "output": "发出的手牌 + 按规则比较后的胜者",
+  "notes": "定义 Player / Card / Game，实现 deal_card、compare_card。比牌规则：三条 > 同花 > 对子 > 高牌，平局比踢脚。2026 年出了很多变体。"
+ },
+ "social-network-follow-graph": {
+  "stmt": "设计社交网络的关注图结构，支持关注/取关、查粉丝/关注列表、以及按快照取 top-k 推荐。",
+  "input": "follow(a,b) / unfollow(a,b) / getFollowers(u) / snapshot()",
+  "output": "各查询的结果",
+  "notes": "快照用持久化数据结构（path copying / 版本号），top-k 用堆或者预计算。"
+ },
+ "resumable-iterator": {
+  "stmt": "实现一个可以被中断、之后从断点继续的迭代器。",
+  "input": "数据源，以及 next()/pause()/resume()",
+  "output": "每次 next 返回下一个元素，resume 后从上次位置继续",
+  "notes": "多问递进：①基础 next ②加 pause/resume ③加多线程/并发安全 ④支持序列化断点。代码会给一部分骨架。"
+ },
+ "vector-linked-list-checkpoints": {
+  "stmt": "实现一个 vector 容器：支持按下标插入/读取，并且在插入时把原位置及之后的元素后移。",
+  "input": "add(index, val) / get(index)",
+  "output": "对应的读值",
+  "notes": "朴素实现是 O(n)。追问怎么优化按下标读取（分块 + 前缀长度数组，类似 rope）。"
+ },
+ "rectangle-board-with-undo": {
+  "stmt": "在一个矩形板上不断添加矩形，随时查询某个点被多少矩形覆盖；支持撤销最后一次添加。",
+  "input": "add(rect) / query(point) / undo()",
+  "output": "指定点上的矩形数量",
+  "notes": "二维差分 + 前缀和，undo 用操作栈；或二维树状数组。"
+ },
+ "job-scheduler-bug-fix": {
+  "stmt": "给一段有 bug 的任务调度器代码，找出问题并修复。",
+  "input": "提交 job 的接口 + worker 执行逻辑",
+  "output": "修复后 job 状态能正确流转（PENDING → RUNNING → COMPLETED/FAILED）",
+  "notes": "两个典型 bug：①function 抛异常时状态更新没执行，job 永远停在 PENDING ②async scheduler 里提交的 job 实际没被运行。"
+ },
+ "modal-lock-fair-modal-lock": {
+  "stmt": "实现一把公平的互斥锁（先到先得），并在此基础上实现 ModalLock。",
+  "input": "acquire() / release()，多线程并发调用",
+  "output": "同一时刻只有一个线程持锁，且获取顺序与请求顺序一致",
+  "notes": "用条件变量 + 等待队列（FIFO）；公平性靠队列而不是 notify 竞争。ModalLock 考的是同一把锁在不同 mode 下的互斥语义。"
+ },
+ "fault-tolerant-work-queue": {
+  "stmt": "实现一个容错的工作队列。",
+  "input": "reserve() / complete(id) / fail(id)",
+  "output": "任务被正确领取、完成或失败；失败的能重试",
+  "notes": "要点：任务超时自动回队、最大重试次数、崩溃后重启的恢复语义。"
+ },
+ "shard-rebalance": {
+  "stmt": "把 N 个 key 分布在 M 个分片上，增删分片时尽量少搬数据。",
+  "input": "当前的 key→shard 映射 + 新的分片数",
+  "output": "新的映射，以及需要迁移的 key 列表",
+  "notes": "一致性哈希（虚拟节点）或 rendezvous hashing；追问迁移过程中的双写与读一致性。"
+ },
+ "distributed-cluster-count-topology": {
+  "stmt": "统计一个分布式集群的机器拓扑：给一批机器间的连接关系，算出集群数量、每群的规模、以及机器之间的最短路径。",
+  "input": "edges: [[a,b], ...]，机器 id 列表",
+  "output": "连通块数量 + 每个块的成员 + 两点间最短路",
+  "notes": "并查集求连通块，BFS 求最短路。follow-up 问动态增删边、以及数据量放不进内存时怎么分片处理。"
+ },
+ "streaming-entropy": {
+  "stmt": "数据流不断到来，实时维护这个流的熵。",
+  "input": "一个一个到达的元素",
+  "output": "当前熵值 H = -Σ p_i log p_i",
+  "notes": "维护频次哈希 + 增量更新；追问滑动窗口版本、近似算法（Count-Min Sketch）。"
+ },
+ "math-reasoning-stopping-time": {
+  "stmt": "数学/概率类推导题，围绕停时（stopping time）展开。",
+  "input": "随机过程定义",
+  "output": "期望停时 / 停时分布的推导与代码验证",
+  "notes": "考察概率论基础 + 用代码做蒙特卡洛验证。"
+ },
+ "chat-activity-message-aggregation": {
+  "stmt": "实现聊天活跃度聚合：一个 user 可以在多个 chat 里，要按最近活跃时间给出用户的活跃聊天列表。",
+  "input": "send(user, chat, ts) / getActiveChats(user)",
+  "output": "按最近活跃排序的 chat 列表",
+  "notes": "每用户维护一个按时间排序的结构；追问统计某用户的活跃 chat 数量、以及跨时间窗口的聚合。"
+ },
+ "code-reading-pytorch-refactor": {
+  "stmt": "给一段写得比较乱的 PyTorch 训练代码，读懂它、指出问题、重构。",
+  "input": "原始训练脚本",
+  "output": "重构后的版本 + 说明改了什么、为什么",
+  "notes": "考察点是先讲判断再动手，不要一上来闷头读十几分钟。常见问题：device 不一致、梯度累积、eval 模式没切换、随机种子。"
+ },
+ "read-write-optimized-structures": {
+  "stmt": "设计一种数据结构，针对读写比例做优化（75 分钟 Systems Coding 轮常见）。",
+  "input": "读/写操作的调用序列",
+  "output": "各操作的正确结果 + 复杂度分析",
+  "notes": "根据读写比选择结构：读多写少用有序数组 + 二分，写多读少用哈希/跳表。"
+ }
+}

@@ -21,6 +21,12 @@ DROP_LINE = re.compile(
     r"^\s*[+\-]?\d+\s*$|^\s*x\s*$|^\s*\.{3,}\s*$|"
     r"^\s*点评|^\s*回复\s*$|^\s*查看全部|^\s*收起|^\s*理由|^\s*参与人数|"
     r"^\s*\[参与人数|^\s*游客，您好|^\s*感谢分享|^\s*谢谢分享|"
+    r"浏览过的版块|论坛导航|新手指南|常见Q&A|关于我们|加入团队|解锁VIP|VIP通行证|"
+    r"购买蓝莓|商务合作|企业招聘|地里专栏|服务条款|社区守则|隐私政策|"
+    r"gas furnace|修理方法|润德国|上六天班|九评领英|找工存档|写了本书|"
+    r"宫殿要懂的套路|焦虑症|The PIP I am|项目管理的方式|留个联系方式|"
+    r"发帖聊聊|详细讲解|^\s*\d{4}\s*年\s*\d+\s*月|"
+    r"^\s*【?海投|^\s*刷题打卡|^\s*Leetcode|^\s*小白转码|"
     r"^\s*相关帖子|^\s*上一篇|^\s*下一篇|^\s*推荐阅读|^\s*猜你喜欢|^\s*热门推荐|"
     r"^\s*(亚麻|Stripe|爱彼迎|Amazon|Mathwork|谷歌|ByteDance|怎样快速|堆栈|工作日|"
     r"贷款公司|求问|核心编制|果is|条纹|刀大师|DRW|google 面经|Rippling|Pinterest|"
@@ -77,6 +83,17 @@ def clean(text):
         if DROP_LINE.match(ln) or DROP_ANY.search(ln):
             continue
         out.append(ln)
+    # ---- 尾部推荐列表清理：从后往前找连续短标题行 ----
+    i = len(out) - 1
+    while i >= 0:
+        run, j = 0, i
+        while j >= 0 and len(out[j]) <= 34 and not out[j].endswith(("。", "！", "？", ".", "!", "?")):
+            run += 1; j -= 1
+        if run >= 4:
+            del out[j + 1:]
+            break
+        i = j if j < i else i - 1
+
     body = "\n".join(out)
     body = re.sub(r"[ \t]+", " ", body)
     body = re.sub(r"\n{3,}", "\n\n", body).strip()
