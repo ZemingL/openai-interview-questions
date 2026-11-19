@@ -1,0 +1,13 @@
+# 抓取数据与凭据（不入库）
+data/
+site/_shots/
+site/data.json
+*.log
+*.jsonl
+*.db
+*.csv
+session.json
+accounts.json
+__pycache__/
+.DS_Store
+node_modules/
