@@ -36,6 +36,13 @@ DROP_ANY = re.compile(
     r"^\s*\[参与人数|感谢分享！|谢谢分享|欢迎分享|很有用的信息|"
     r"本帖子中包含更多资源|点击阅读更多|打开一亩三分地APP|常见问题|联系客服|"
     r"商务洽谈|Copyright|See Terms|触屏版|电脑版|客户端|Powered by Discuz|"
+    r"隐私提醒|禁止发布广告|找人请去|论坛内容在发帖|为防止被骚扰|公开留微信|"
+    r"快速回复|返回顶部|返回列表|发表回复|回帖后跳|查阅全站|本版积分规则|"
+    r"干货版块可免费使用|关注我们|微信公众号|海外投资公众号|求职移民公众号|"
+    r"体验AI模拟面试|个性化反馈|提升技术水平|助力职业进阶|"
+    r"^\s*var\s|^\s*//\s|fastpostvalidate|reoverBtn|isValid|"
+    r"^\s*本帖最后由|^\s*补充内容|^\s*编辑|"
+    r"^\.1point3acres|1point3acres\.com$|^\s*From 1point|^\s*check 1point"
     r"^Notice:|Instant|Salarytics|Visa Tracker")
 
 # 行内清理
