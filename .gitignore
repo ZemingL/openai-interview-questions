@@ -13,3 +13,8 @@ __pycache__/
 node_modules/
 scripts/__pycache__/
 site/
+HIDE.md
+QUICKSTART.md
+openai_原题清单.md
+*.md
+!README.md
