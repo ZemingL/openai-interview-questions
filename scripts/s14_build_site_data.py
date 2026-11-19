@@ -9,6 +9,84 @@ DB = os.path.join(DATA, "1p3a.db")
 OUT = os.path.join(BASE, "site", "data.json")
 os.makedirs(os.path.join(BASE, "site"), exist_ok=True)
 
+EN = {
+ "infection-spread-cellular-automata": "Infection Spread / Cellular Automata",
+ "gpu-credits": "GPU Credits",
+ "poker-simulation": "Poker Simulation / Hand Ranking",
+ "monster-battle-system": "Monster Battle System",
+ "modal-lock-fair-modal-lock": "ModalLock / FairModalLock",
+ "payment-coffee-shop": "Payment System / Coffee Shop",
+ "design-chess-game": "Design Chess / Chess.com",
+ "design-sora-video-generation": "Design Sora Video Generation",
+ "social-network-follow-graph": "Social Network Follow Graph",
+ "kv-store-time-based": "KV Store / Time-based Index",
+ "durable-kv-store-serialization": "Durable KV Store Serialization",
+ "resumable-iterator": "Resumable Iterator",
+ "ip-address-cidr-iterator": "IPv4 / CIDR Iterator",
+ "numpy-1nn-wx-b": "NumPy 1-NN / Wx+B",
+ "autograd-hillis-steele-scan": "Autograd / Hillis-Steele Scan",
+ "transformer-bug-hunt": "Transformer Bug Hunt",
+ "masked-cross-entropy-loss": "Masked Cross Entropy Loss",
+ "classifier-noisy-annotators": "Classifier with Noisy Annotators",
+ "memory-allocator": "Memory Allocator",
+ "opensheet-spreadsheet": "OpenSheet Spreadsheet",
+ "fault-tolerant-work-queue": "Fault-tolerant Work Queue",
+ "chat-activity-message-aggregation": "Chat Activity Message Aggregation",
+ "shard-rebalance": "Shard Rebalance",
+ "distributed-cluster-count-topology": "Distributed Cluster / Machine Topology",
+ "design-cloud-ide": "Design Cloud IDE",
+ "design-slack": "Design Slack",
+ "design-google-calendar": "Design Google Calendar",
+ "design-url-shortener": "Design URL Shortener",
+ "design-typing-race-game": "Design Typing Race Game",
+ "design-ai-chatbot-system": "Design AI Chatbot System",
+ "chatgpt-enterprise-rag": "ChatGPT Enterprise RAG",
+ "rag-search-ml-design": "RAG Search ML Design",
+ "webhook-delivery-system": "Webhook Delivery System",
+ "image-sharing-content-deduplication": "Image Sharing Content Deduplication",
+ "multi-tenant-ci-cd-workflow": "Multi-tenant CI/CD Workflow",
+ "grid-demand-response-dispatch": "Grid Demand Response Dispatch",
+ "points-of-interest-yelp": "Points of Interest (Yelp)",
+ "gpt-3-playground": "GPT-3 Playground",
+ "real-time-ai-product-feature": "Real-time AI Product Feature",
+ "version-dependency": "Version Dependency Resolution",
+ "time-based-kv-store": "Time-based KV Store",
+ "streaming-entropy": "Streaming Entropy",
+ "math-reasoning-stopping-time": "Math Reasoning / Stopping Time",
+ "sharded-matmul-backprop-debugging": "Sharded MatMul Backprop Debugging",
+ "vector-linked-list-checkpoints": "Vectorized Linked List Checkpoints",
+ "model-calibration-ace-metric": "Model Calibration / ACE Metric",
+ "light-source-sampling-mle": "Light Source Sampling",
+ "code-reading-pytorch-refactor": "Code Reading / PyTorch Refactor",
+ "toy-language-type-inference": "Toy Language Type Inference",
+ "implement-cd-command": "Implement cd Command",
+ "crossword-puzzle-solver": "Crossword Puzzle Solver",
+ "elevator-scheduling-simulation": "Elevator Scheduling Simulation",
+ "rectangle-board-with-undo": "Rectangle Board with Undo",
+ "in-memory-database-sql": "In-memory Database / SQL",
+ "maximum-score-grid-path-limited-jumps": "Maximum Score Grid Path (Limited Jumps)",
+ "oa-count-shop-paths": "OA: Count Shop Paths",
+ "oa-simple-network-endpoint": "OA: Simple Network Endpoint",
+ "oa-microorganism-simulation": "OA: Microorganism Simulation",
+ "job-scheduler-bug-fix": "Job Scheduler Bug Fix",
+ "data-labeling-task-scheduler": "Data Labeling Task Scheduler",
+ "mining-novel-data-unlabeled-corpus": "Mining Novel Data from Unlabeled Corpus",
+ "android-mobile-screen": "Android Mobile Screen",
+ "design-steam-game-store-launcher": "Design Steam Game Store Launcher",
+ "technical-deep-dive": "Technical Deep Dive",
+ "hm-bq-why-openai": "HM Behavioral: Why OpenAI",
+ "recruiter-hr-screen-bq": "Recruiter / HR Screen",
+ "engineering-management-fundamentals": "Engineering Management Fundamentals",
+ "cross-functional-collaboration-bq": "Cross-functional Collaboration (BQ)",
+ # EXTRA
+ "tag-html-parsing": "Tag / HTML Parsing",
+ "rate-limiter": "Rate Limiter",
+ "ai-safety-agi": "AI Safety / AGI",
+ "ml-coding-numpy": "ML Coding (numpy / Numerical Stability)",
+ "refactoring": "Refactoring",
+ "reservoir-sampling": "Reservoir Sampling",
+}
+
 # slug -> (中文名, 匹配正则, 岗位提示)
 MAP = {
  "infection-spread-cellular-automata": ("植物感染 / 细胞自动机", r"植物感染|感染|infect|cellular.?automata|传染病|plant.?infection", ["swe","mle","research"]),
@@ -219,7 +297,7 @@ def main():
         stages = [s for s, c in sc.most_common() if c / tot >= 0.30][:2] or \
                  [s for s, _ in sc.most_common(1)]
         questions.append({
-            "id": qid, "name": name, "name_en": name_en,
+            "id": qid, "name": name, "name_en": name_en or name,
             "category": category,
             "roles": allroles,
             "stages": stages,
@@ -240,11 +318,11 @@ def main():
             for x in qb[0]["questions"]:
                 if x.get("slug") == slug:
                     freq = x.get("frequency"); cat = x.get("category") or cat
-        build(slug, name, pat, roles, cat, freq, name_en=slug.replace("-", " ").title())
+        build(slug, name, pat, roles, cat, freq, name_en=EN.get(slug) or slug.replace("-", " ").title())
 
     # 补充题
     for qid, (name, pat, roles, cat) in EXTRA.items():
-        build(qid, name, pat, roles, cat)
+        build(qid, name, pat, roles, cat, None, EN.get(qid) or qid.replace("-", " ").title())
 
     questions.sort(key=lambda x: (-x["heat"], x["name"]))
     roles_agg = collections.Counter()

@@ -39,9 +39,16 @@ h1{margin:0 0 6px;font-size:24px;letter-spacing:-.4px;font-weight:700}
 h1 .g{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;
   background-clip:text;color:transparent}
 .sub{color:var(--dim);font-size:13px;margin:0}
+.hdrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.lang{display:flex;background:var(--card);border:1px solid var(--line);border-radius:9px;
+  padding:2px;flex:0 0 auto}
+.lang span{padding:5px 11px;font-size:12.5px;color:var(--dim);cursor:pointer;
+  border-radius:7px;user-select:none;transition:.15s;line-height:1.3}
+.lang span.on{background:var(--accent);color:#04120e;font-weight:600}
 .stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--dim)}
-.stat b{color:var(--txt);font-size:15px;font-variant-numeric:tabular-nums;margin-right:3px}
+.stat b{color:var(--txt);font-size:15px;font-variant-numeric:tabular-nums;margin-right:4px}
+.stat span{color:var(--dim)}
 
 /* ---------- filters ---------- */
 .filters{position:sticky;top:0;z-index:30;background:rgba(11,14,20,.94);
@@ -204,26 +211,29 @@ footer{text-align:center;padding:36px 16px;color:var(--dim2);font-size:12px;line
 <div class="wrap">
 
 <header>
-  <h1><span class="g">OpenAI</span> 面试题库</h1>
-  <p class="sub">数据来自一亩三分地 /bbs/ 论坛 openai 面经帖，已去重归类 · 生成于 __GEN__</p>
+  <div class="hdrow">
+    <h1><span class="g">OpenAI</span> <span id="hTitle">面试题库</span></h1>
+    <div class="lang" id="lang"><span data-l="zh">中</span><span data-l="en">EN</span></div>
+  </div>
+  <p class="sub" id="hSub">去重归类 · 手机 / 桌面自适应 · 生成于 __GEN__</p>
   <div class="stats">
-    <div class="stat"><b>__NQ__</b>道题</div>
-    <div class="stat"><b>__NP__</b>篇原帖</div>
-    <div class="stat"><b>__NC__</b>万字正文</div>
-    <div class="stat"><b id="shown">0</b>条当前筛选</div>
+    <div class="stat"><b>__NQ__</b><span id="sQ">道题</span></div>
+    <div class="stat"><b>__NP__</b><span id="sP">篇原帖</span></div>
+    <div class="stat"><b>__NC__</b><span id="sC">万字正文</span></div>
+    <div class="stat"><b id="shown">0</b><span id="sS">条当前筛选</span></div>
   </div>
 </header>
 
 <div class="filters">
   <div class="searchrow">
-    <input type="search" id="q" placeholder="搜题目、标签、原帖标题…">
+    <input type="search" id="qInput" placeholder="搜题目、标签、原帖标题…">
     <select id="sort">
-      <option value="heat">按热度</option>
-      <option value="name">按名称</option>
-      <option value="cat">按分类</option>
+      <option value="heat" id="tHeat">按热度</option>
+      <option value="name" id="tName">按名称</option>
+      <option value="cat" id="tCat">按分类</option>
     </select>
   </div>
-  <div class="fbtn" id="fbtn">筛选 <span id="fcount"></span><i>▾</i></div>
+  <div class="fbtn" id="fbtn"><span id="fLabel">筛选</span> <span id="fcount"></span><i>▾</i></div>
   <div class="fbody" id="fbody">
     <div class="chips" id="catChips"></div>
     <div class="chips" id="roleChips"></div>
@@ -232,12 +242,12 @@ footer{text-align:center;padding:36px 16px;color:var(--dim2);font-size:12px;line
 </div>
 
 <div class="list" id="list"></div>
-<div class="empty" id="empty" style="display:none">没有匹配的题目，清一下筛选试试</div>
+<div class="empty" id="empty" style="display:none"></div>
 
 <footer>
-  数据源：一亩三分地论坛 openai 面经帖 · <span id="fmeta"></span><br>
-  原帖链接指向 1point3acres.com，部分内容需论坛积分<br>
-  Python 在浏览器本地运行（Pyodide），代码不上传任何服务器
+  <span id="fLine1"></span><br>
+  <span id="fLine2"></span><br>
+  <span id="fLine3"></span>
 </footer>
 </div>
 <div class="backtop" id="backtop">↑</div>
@@ -246,6 +256,66 @@ footer{text-align:center;padding:36px 16px;color:var(--dim2);font-size:12px;line
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>
 const D = JSON.parse(document.getElementById('DATA').textContent);
+
+/* ================= i18n ================= */
+const T={
+ zh:{hTitle:'面试题库',hSub:'去重归类 · 手机 / 桌面自适应 · 生成于 __GEN__',
+  sQ:'道题',sP:'篇原帖',sC:'万字正文',sS:'条当前筛选',
+  q:'搜题目、标签、原帖标题…',heat:'按热度',name:'按名称',cat:'按分类',filter:'筛选',
+  snip:'题面摘录',related:'关联原帖',runtime:'Python 运行环境',
+  run:'▶ 运行',reset:'重置',copy:'复制',full:'全屏',exit:'退出',
+  output:'输出',err:'报错',running:'运行中',done:'运行完成，没有输出',
+  loadHint:'首次运行需下载 Python 运行时（约 10MB）',
+  noSnip:'该题在已抓帖子中暂无题面摘录',fromPost:'原帖',
+  morePosts:n=>`另有 ${n} 篇相关原帖`,floors:'楼',ch:'字',mentions:n=>`${n} 篇帖子提到`,
+  runnable:'可运行',empty:'没有匹配的题目，清一下筛选试试',
+  f1:'数据来自公开社区论坛的 OpenAI 面经帖',f2:'原帖链接指向原始论坛，部分内容需论坛积分',
+  f3:'Python 在浏览器本地运行（Pyodide），代码不上传任何服务器',
+  related_n:'关联原帖',snip_n:'题面摘录',freq:'官方频率',
+  catN:{coding:'Coding','system-design':'System Design',behavioral:'Behavioral',other:'Other'},
+  roleN:{swe:'SWE',mle:'MLE',research:'Research',infra:'Infra',pm:'PM',ds:'DS',em:'EM',all:'通用'}},
+ en:{hTitle:'Interview Questions',hSub:'Deduplicated & categorized · mobile / desktop · built __GEN__',
+  sQ:'questions',sP:'posts',sC:'K chars',sS:'shown',
+  q:'Search questions, tags, post titles…',heat:'By heat',name:'By name',cat:'By category',filter:'Filters',
+  snip:'Question excerpts',related:'Related posts',runtime:'Python Runtime',
+  run:'▶ Run',reset:'Reset',copy:'Copy',full:'Fullscreen',exit:'Exit',
+  output:'Output',err:'Error',running:'Running',done:'Finished with no output',
+  loadHint:'First run downloads the Python runtime (~10MB)',
+  noSnip:'No excerpt captured for this question yet',fromPost:'post',
+  morePosts:n=>`${n} more related posts`,floors:'floors',ch:'chars',mentions:n=>`mentioned in ${n} posts`,
+  runnable:'Runnable',empty:'Nothing matches — try clearing some filters',
+  f1:'Data collected from public community forum OpenAI interview posts',
+  f2:'Post links point to the original forum; some content requires forum credits',
+  f3:'Python runs locally in your browser (Pyodide) — no code is uploaded',
+  related_n:'Related posts',snip_n:'Excerpts',freq:'Official frequency',
+  catN:{coding:'Coding','system-design':'System Design',behavioral:'Behavioral',other:'Other'},
+  roleN:{swe:'SWE',mle:'MLE',research:'Research',infra:'Infra',pm:'PM',ds:'DS',em:'EM',all:'General'}}
+};
+let LANG=(localStorage.getItem('lang')||(navigator.language||'en').toLowerCase().startsWith('zh')?'zh':'en');
+const t=k=>T[LANG][k];
+const catName=(c)=>T[LANG].catN[c]||c;
+const roleName=(r)=>T[LANG].roleN[r]||r;
+const qName=(q)=>LANG==='en'?(q.name_en||q.name):q.name;
+
+function applyLang(){
+  document.documentElement.lang = LANG==='zh'?'zh-CN':'en';
+  document.querySelectorAll('#lang span').forEach(el=>
+    el.classList.toggle('on', el.dataset.l===LANG));
+  for(const [id,k] of [['hTitle','hTitle'],['sQ','sQ'],['sP','sP'],['sC','sC'],['sS','sS'],
+      ['tHeat','heat'],['tName','name'],['tCat','cat'],['fLabel','filter'],
+      ['fLine1','f1'],['fLine2','f2'],['fLine3','f3']]){
+    const el=document.getElementById(id); if(el) el.textContent=t(k);
+  }
+  document.getElementById('hSub').textContent=t('hSub').replace('__GEN__',D.meta.generated);
+  document.getElementById('qInput').placeholder=t('q');
+  document.getElementById('empty').textContent=t('empty');
+  render();
+}
+document.querySelectorAll('#lang span').forEach(el=>{
+  el.onclick=()=>{LANG=el.dataset.l;localStorage.setItem('lang',LANG);applyLang();};
+});
+/* ========================================= */
+
 const state = {cat:new Set(), role:new Set(), stage:new Set(), q:'', sort:'heat'};
 
 /* ---------- chips ---------- */
@@ -272,7 +342,7 @@ document.querySelectorAll('.chip').forEach(c=>{
 });
 
 /* ---------- search / sort ---------- */
-document.getElementById('q').oninput=e=>{state.q=e.target.value.trim().toLowerCase();render()};
+document.getElementById('qInput').oninput=e=>{state.q=e.target.value.trim().toLowerCase();render()};
 const fbtn=document.getElementById('fbtn'), fbody=document.getElementById('fbody');
 fbtn.onclick=()=>{fbody.classList.toggle('open');fbtn.classList.toggle('open')};
 document.getElementById('sort').onchange=e=>{state.sort=e.target.value;render()};
@@ -306,55 +376,55 @@ function render(){
 
   document.getElementById('list').innerHTML=qs.map((q,i)=>{
     const hot=q.heat>=10?'hot':'';
-    const roles=q.roles.map(r=>`<span class="tag">${roleNames[r]||r}</span>`).join('');
+    const roles=q.roles.map(r=>`<span class="tag">${roleName(r)}</span>`).join('');
     const stages=q.stages.map(s=>`<span class="tag">${s}</span>`).join('');
     const snips=(q.snippets||[]).map(s=>
-      `<div class="snip"><span class="from">原帖 <a href="https://www.1point3acres.com/bbs/thread-${s.tid}-1-1.html" target="_blank" rel="noopener">${s.tid}</a></span>${esc(s.text)}</div>`
-    ).join('') || '<div class="snip">该题在已抓帖子中暂无题面摘录</div>';
+      `<div class="snip"><span class="from">${t('fromPost')} <a href="https://www.1point3acres.com/bbs/thread-${s.tid}-1-1.html" target="_blank" rel="noopener">${s.tid}</a></span>${esc(s.text)}</div>`
+    ).join('') || `<div class="snip">${t('noSnip')}</div>`;
     const posts=(q.posts||[]).slice(0,10).map(p=>
       `<div class="post"><a class="t" href="${p.url}" target="_blank" rel="noopener">${esc(p.title)}</a>
-       <span class="m">${p.floors} 楼 · ${p.chars.toLocaleString()} 字</span></div>`
+       <span class="m">${p.floors} ${t('floors')} · ${p.chars.toLocaleString()} ${t('ch')}</span></div>`
     ).join('');
-    const more=(q.posts||[]).length>10?`<div class="hint">另有 ${q.posts.length-10} 篇相关原帖</div>`:'';
+    const more=(q.posts||[]).length>10?`<div class="hint">${t('morePosts')(q.posts.length-10)}</div>`:'';
 
     const editor = q.runnable ? `
       <div class="sec">
-        <h3>Python 运行环境</h3>
+        <h3>${t('runtime')}</h3>
         <div class="editor-wrap">
           <div class="editor-bar"><span><span class="dot"></span>main.py</span><span>Pyodide · 浏览器本地执行</span></div>
           <textarea class="code" id="code-${q.id}" spellcheck="false">${esc(templateFor(q))}</textarea>
           <div class="runs">
-            <button class="primary" onclick="runPy('${q.id}',this)">▶ 运行</button>
-            <button class="ghost" onclick="resetPy('${q.id}')">重置</button>
-            <button class="ghost" onclick="copyPy('${q.id}',this)">复制</button>
-            <button class="ghost fs" onclick="fullPy('${q.id}')">全屏</button>
+            <button class="primary" onclick="runPy('${q.id}',this)">${t('run')}</button>
+            <button class="ghost" onclick="resetPy('${q.id}')">${t('reset')}</button>
+            <button class="ghost" onclick="copyPy('${q.id}',this)">${t('copy')}</button>
+            <button class="ghost fs" onclick="fullPy('${q.id}')">${t('full')}</button>
           </div>
           <div class="out" id="out-${q.id}"></div>
         </div>
-        <div class="hint">首次运行需下载 Python 运行时（约 10MB），之后秒开</div>
+        <div class="hint">${t('loadHint')}</div>
       </div>` : '';
 
     return `<div class="card" id="card-${q.id}">
       <div class="head" onclick="toggle('${q.id}',event)">
         <div class="rank ${hot}">${i+1}</div>
         <div class="body">
-          <div class="title">${esc(q.name)}</div>
+          <div class="title">${esc(qName(q))}</div>
           <div class="tags">
-            <span class="tag cat-${q.category}">${CATNAME[q.category]||q.category}</span>
-            ${q.heat?`<span class="tag heat">${q.heat} 篇帖子提到</span>`:''}
-            ${q.runnable?'<span class="tag run">可运行</span>':''}
+            <span class="tag cat-${q.category}">${catName(q.category)}</span>
+            ${q.heat?`<span class="tag heat">${t('mentions')(q.heat)}</span>`:''}
+            ${q.runnable?`<span class="tag run">${t('runnable')}</span>`:''}
             ${roles}${stages}
           </div>
           <div class="metrics">
-            <span>关联原帖 <b>${(q.posts||[]).length}</b></span>
-            <span>题面摘录 <b>${(q.snippets||[]).length}</b></span>
-            ${q.frequency?`<span>官方频率 <b>${q.frequency}</b></span>`:''}
+            <span>${t('related_n')} <b>${(q.posts||[]).length}</b></span>
+            <span>${t('snip_n')} <b>${(q.snippets||[]).length}</b></span>
+            ${q.frequency?`<span>${t('freq')} <b>${q.frequency}</b></span>`:''}
           </div>
         </div>
       </div>
       <div class="panel">
-        <div class="sec"><h3>题面摘录（来自原帖）</h3>${snips}</div>
-        ${posts?`<div class="sec"><h3>关联原帖</h3><div class="posts">${posts}</div>${more}</div>`:''}
+        <div class="sec"><h3>${t('snip')}</h3>${snips}</div>
+        ${posts?`<div class="sec"><h3>${t('related')}</h3><div class="posts">${posts}</div>${more}</div>`:''}
         ${editor}
       </div>
     </div>`;
@@ -401,10 +471,10 @@ function fullPy(id){
   w.classList.toggle('fs');
   if(w.classList.contains('fs')){
     document.body.style.overflow='hidden';
-    w.querySelector('.fs').textContent='退出';
+    w.querySelector('.fs').textContent=t('exit');
   }else{
     document.body.style.overflow='';
-    w.querySelector('.fs').textContent='全屏';
+    w.querySelector('.fs').textContent=t('full');
   }
 }
 function resetPy(id){
@@ -414,15 +484,15 @@ function resetPy(id){
 function copyPy(id,btn){
   const ta=document.getElementById('code-'+id);
   navigator.clipboard.writeText(ta.value).then(()=>{
-    const t=btn.textContent; btn.textContent='已复制'; setTimeout(()=>btn.textContent=t,1200);
+    const old=btn.textContent; btn.textContent='✓'; setTimeout(()=>btn.textContent=old,1200);
   });
 }
 async function runPy(id,btn){
   const out=document.getElementById('out-'+id);
   const code=document.getElementById('code-'+id).value;
   out.className='out show';
-  out.innerHTML='<span class="label">运行中</span>正在加载 Python 运行时…';
-  btn.disabled=true; btn.textContent='运行中…';
+  out.innerHTML=`<span class="label">${t('running')}</span>${t('loadHint')}`;
+  btn.disabled=true; btn.textContent=t('running')+'…';
   try{
     const py=await ensurePy();
     py.setStdout({batched:(s)=>{}});
@@ -434,24 +504,22 @@ async function runPy(id,btn){
       await py.runPythonAsync(code);
     }catch(e){ err=e.message||String(e); }
     const txt=buf.join('');
-    out.innerHTML = (txt?`<span class="label">输出</span>${esc(txt)}`:'')
-      + (err?`<span class="label">报错</span><span class="err">${esc(err)}</span>`:
-         (txt?'':'<span class="ok">运行完成，没有输出</span>'));
+    out.innerHTML = (txt?`<span class="label">${t('output')}</span>${esc(txt)}`:'')
+      + (err?`<span class="label">${t('err')}</span><span class="err">${esc(err)}</span>`:
+         (txt?'':`<span class="ok">${t('done')}</span>`));
   }catch(e){
-    out.innerHTML=`<span class="label">失败</span><span class="err">${esc(e.message||e)}</span>`;
+    out.innerHTML=`<span class="label">${t('err')}</span><span class="err">${esc(e.message||e)}</span>`;
   }finally{
-    btn.disabled=false; btn.textContent='▶ 运行';
+    btn.disabled=false; btn.textContent=t('run');
   }
 }
 
 /* ---------- misc ---------- */
-document.getElementById('fmeta').textContent =
-  `${D.meta.questions} 道题 / ${D.meta.posts} 篇原帖`;
 const bt=document.getElementById('backtop');
 window.addEventListener('scroll',()=>{bt.classList.toggle('show',window.scrollY>600)});
 bt.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 
-render();
+applyLang();
 </script>
 </body>
 </html>
