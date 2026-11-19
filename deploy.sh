@@ -5,7 +5,7 @@
 #   GH_TOKEN=ghp_xxx ./deploy.sh     # 有 token，全自动（建仓库 + 推 + 开 Pages）
 set -euo pipefail
 REPO="${REPO:-openai-interview-questions}"
-USER="${GH_USER:-liu-zeming}"
+USER="${GH_USER:-ZemingL}"
 BRANCH="main"
 
 cd "$(dirname "$0")"

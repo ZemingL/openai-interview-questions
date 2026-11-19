@@ -213,23 +213,45 @@ def clean(t):
         out.append(ln)
     return "\n".join(out)
 
+BAD = re.compile(
+    r"提升卡|置顶卡|关贴卡|开贴卡|变色卡|千斤顶|狗仔卡|当前离线|使用道具|"
+    r"积分\s*通行证|大米\s*颗|鳄梨\s*个|水井\s*尺|注册时间|最后登录|"
+    r"本帖隐藏|积分高于|您当前积分|使用VIP即刻解锁|未登录|注册一亩三分地|"
+    r"itemprop|class=\"|&#x?[0-9A-Fa-f]+;|setAttribute|innerHTML|document\.|"
+    r"欢迎体验一亩三分地|职业规划.*面试辅导|量身定制|使用独家折扣码|"
+    r"给您点个赞|给你点个赞|查看全部评分|淘帖\d|好苗\d|杂草\d|"
+    r"相关帖子|上一篇|下一篇|回复发表中|onclick|javascript:")
+
 def snippet(body, pat, n=1):
-    """抓命中处上下文，优先选含题面特征的段落"""
-    body = clean(body)
-    for cut in ("本帖隐藏的内容需要积分", "您需要 登录 才可以下载"):
-        i = body.find(cut)
-        if i > 200: body = body[:i]
+    """从原帖正文取【连续子串】作为摘录；含 UI 垃圾的候选直接跳过，而非删行拼接。"""
+    if not body:
+        return []
     cands = []
     for m in re.finditer(pat, body, re.I):
-        s0 = max(0, m.start() - 200); e0 = min(len(body), m.end() + 380)
-        seg = re.sub(r"\n{2,}", "\n", body[s0:e0]).strip()
-        if len(seg) < 60: continue
-        score = len(SIGNAL.findall(seg))
-        cands.append((score, len(seg), seg))
-    if not cands: return []
+        s0 = max(0, m.start() - 200)
+        e0 = min(len(body), m.end() + 380)
+        seg = body[s0:e0]
+        if BAD.search(seg):
+            continue
+        seg = seg.replace("\u200b", "")
+        seg = re.sub(r"[ \t]+", " ", seg)
+        seg = re.sub(r"\n{3,}", "\n\n", seg).strip()
+        if len(seg) < 60:
+            continue
+        cands.append((len(SIGNAL.findall(seg)), len(seg), seg))
+    if not cands:
+        # 全部候选都带垃圾：退回"只保留不含垃圾的行"，但仍按行序拼接
+        for m in re.finditer(pat, body, re.I):
+            s0 = max(0, m.start() - 200); e0 = min(len(body), m.end() + 380)
+            seg = "\n".join(ln for ln in body[s0:e0].split("\n")
+                             if len(ln.strip()) > 5 and not BAD.search(ln))
+            seg = re.sub(r"\n{3,}", "\n\n", seg).strip()
+            if len(seg) >= 60 and not BAD.search(seg):
+                cands.append((len(SIGNAL.findall(seg)), len(seg), seg))
+    if not cands:
+        return []
     cands.sort(key=lambda x: (-x[0], -x[1]))
-    ok = [c[2] for c in cands if c[0] > 0] or [cands[0][2]]
-    return ok[:n]
+    return [cands[0][2]][:n]
 
 
 def detect_role(title, body):

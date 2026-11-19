@@ -12,7 +12,7 @@
 
 ## 在线访问
 
-GitHub Pages: https://liu-zeming.github.io/openai-interview-questions/
+GitHub Pages: https://zemingl.github.io/openai-interview-questions/
 
 ## 本地运行
 
